@@ -58,7 +58,50 @@ public class MainActivity extends Activity {
         void line(float x,float y,float x2,float y2,int color,float width){p.setColor(color);p.setStrokeWidth(width);p.setStyle(Paint.Style.STROKE);c.drawLine(x,y,x2,y2,p);p.setStyle(Paint.Style.FILL);}
         void text(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.DEFAULT_BOLD:Typeface.DEFAULT);c.drawText(s,x,y,p);}
         void center(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.DEFAULT_BOLD:Typeface.DEFAULT);c.drawText(s,x-p.measureText(s)/2,y,p);}
-        @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);c=canvas;W=getWidth();H=getHeight();sx=W/1536f;sy=H/768f;c.save();c.scale(sx,sy);fill(bg);c.drawRect(0,0,1536,768,p);header();for(int i=0;i<10;i++){float x=8+i*77.2f;rect(x,82,72,36,i==selected?colors[i]:panel2,7);center(frames[i],x+36,105,14,i==selected?bg:colors[i],true);}if(pageIndex==0)drawChart();else if(pageIndex==1)drawExplanation();else drawDetail();if(pageIndex>0){rect(8,742,1520,20,0xff241722,4);text("DATA BERSUMBER DARI BIQUOTE • Analisis hanya memakai candle tertutup dan data segar. Sinyal WAIT jika belum terkonfirmasi.",17,756,11,0xffffb3be,true);}c.restore();}
+        @Override protected void onDraw(Canvas canvas){
+            super.onDraw(canvas);c=canvas;W=getWidth();H=getHeight();c.save();
+            if(H>W){
+                sx=W/768f;sy=H/1536f;c.scale(sx,sy);drawPortrait();
+            }else{
+                sx=W/1536f;sy=H/768f;c.scale(sx,sy);fill(bg);c.drawRect(0,0,1536,768,p);header();
+                for(int i=0;i<10;i++){float x=8+i*77.2f;rect(x,82,72,36,i==selected?colors[i]:panel2,7);center(frames[i],x+36,105,14,i==selected?bg:colors[i],true);}
+                if(pageIndex==0)drawChart();else if(pageIndex==1)drawExplanation();else drawDetail();
+                if(pageIndex>0){rect(8,742,1520,20,0xff241722,4);text("DATA BERSUMBER DARI BIQUOTE • Analisis hanya memakai candle tertutup dan data segar. Sinyal WAIT jika belum terkonfirmasi.",17,756,11,0xffffb3be,true);}
+            }c.restore();
+        }
+        void drawPortrait(){
+            fill(bg);c.drawRect(0,0,768,1536,p);
+            rect(12,12,744,82,panel,12);text("◆",25,64,37,0xffffff00,true);text("XAUUSD Analyzer",75,43,24,white,true);
+            text("HARGA "+livePrice+"  •  SPREAD "+liveSpread,76,70,13,green,true);
+            text("FEED: "+liveState,535,43,13,liveState.equals("LIVE")?green:yellow,true);
+            text("Quote: "+liveTime,535,68,10,muted,false);
+            for(int i=0;i<10;i++){int col=i%5,row=i/5;float x=12+col*150,y=105+row*43;rect(x,y,142,36,i==selected?colors[i]:panel2,7);center(frames[i],x+71,y+23,13,i==selected?bg:colors[i],true);}
+            float top=204;
+            rect(12,top,744,42,panel,8);
+            text((pageIndex==0?"CHART XAUUSD • "+frames[selected]:pageIndex==1?"HALAMAN 2 • PERJALANAN HARGA":"HALAMAN 3 • RINGKASAN MULTI-TIMEFRAME"),24,top+26,15,cyan,true);
+            if(pageIndex==0){
+                float cx=24,cy=top+55,cw=620,ch=870;
+                rect(cx,cy,cw,ch,panel,6);
+                List<SwingAnalysisEngine.Candle> bars=data.get(frames[selected]);
+                if(bars!=null&&!bars.isEmpty()){
+                    int start=Math.max(0,bars.size()-300),n=bars.size()-start;double lo=Double.MAX_VALUE,hi=-Double.MAX_VALUE;
+                    for(int i=start;i<bars.size();i++){SwingAnalysisEngine.Candle b=bars.get(i);lo=Math.min(lo,b.low);hi=Math.max(hi,b.high);}
+                    double pad=(hi-lo)*.05;lo-=pad;hi+=pad;
+                    for(int g=0;g<=6;g++){float yy=cy+ch*g/6;line(cx,yy,cx+cw,yy,grid,1);text(fmt(hi-(hi-lo)*g/6),cx+cw+8,yy+4,10,muted,false);}
+                    float slot=cw/n;
+                    for(int i=0;i<n;i++){SwingAnalysisEngine.Candle b=bars.get(start+i);float xx=cx+i*slot+slot/2;float yH=cy+(float)((hi-b.high)/(hi-lo))*ch,yL=cy+(float)((hi-b.low)/(hi-lo))*ch,yO=cy+(float)((hi-b.open)/(hi-lo))*ch,yC=cy+(float)((hi-b.close)/(hi-lo))*ch;int col=b.close>=b.open?green:red;line(xx,yH,xx,yL,col,Math.max(1,slot*.45f));fill(col);c.drawRect(xx-Math.max(1,slot*.32f),Math.min(yO,yC),xx+Math.max(1,slot*.32f),Math.max(yO,yC)+1.5f,p);}
+                }
+                text("BAR: "+(data.get(frames[selected])==null?0:data.get(frames[selected]).size())+" • "+(Boolean.TRUE.equals(freshness.get(frames[selected]))?"FRESH":"STALE / WAIT"),24,cy+ch+24,12,red,true);
+                rect(24,cy+ch+40,720,80,panel2,8);text("LEVEL TERDEKAT",36,cy+ch+61,12,cyan,true);SwingAnalysisEngine.Result r=analyses.get(frames[selected]);if(r!=null){text("High "+fmt(r.lastConfirmedHigh),36,cy+ch+82,11,white,false);text("Low "+fmt(r.lastConfirmedLow),300,cy+ch+82,11,white,false);}
+            }else if(pageIndex==1){
+                float y=top+55;String[] order={"W1","D1","H4","H1","M30","M15","M5","M1"};
+                for(String tf:order){rect(20,y,728,115,panel2,8);int idx=Arrays.asList(frames).indexOf(tf);text(tf,32,y+23,13,colors[idx],true);String narrative=journeyFor(tf,price());drawWrapped(narrative,32,y+45,86,11,white,14,5);SwingAnalysisEngine.Result r=analyses.get(tf);if(r!=null)text("High "+fmt(r.lastConfirmedHigh)+"   Low "+fmt(r.lastConfirmedLow),32,y+103,10,muted,false);y+=124;if(y>1410)break;}
+            }else{
+                float y=top+55;for(String tf:frames){SwingAnalysisEngine.Result r=analyses.get(tf);rect(20,y,728,94,panel2,8);int idx=Arrays.asList(frames).indexOf(tf);text(tf+"  •  "+(r==null?"DATA BELUM CUKUP":r.structure),32,y+24,13,colors[idx],true);text("Kondisi: "+(Boolean.TRUE.equals(freshness.get(tf))?"FRESH":"STALE / WAIT"),32,y+45,11,Boolean.TRUE.equals(freshness.get(tf))?green:red,true);if(r!=null)text("High "+fmt(r.lastConfirmedHigh)+"   Low "+fmt(r.lastConfirmedLow),32,y+67,11,white,false);y+=101;if(y>1410)break;}
+            }
+            rect(12,1460,744,58,0xff21111d,7);text("DATA BIQUOTE • candle tertutup • STALE = bukan sinyal live",24,1494,12,0xffff4770,true);
+            rect(520,1410,220,36,panel2,7);center("GANTI HALAMAN →",630,1433,12,cyan,true);
+        }
         void header(){rect(8,7,780,68,panel,9);text("◆",20,51,42,0xffffff00,true);text("XAUUSD Analyzer",82,34,26,white,true);text("MULTI-TIMEFRAME • HH/HL/LH/LL • SUPPLY & DEMAND",83,57,12,muted,false);rect(800,7,250,68,panel,9);text("HARGA SEKARANG",814,26,11,muted,true);text(livePrice,814,53,25,green,true);rect(1060,7,125,68,panel,9);text("SPREAD",1073,26,11,muted,true);text(liveSpread,1073,51,22,white,true);rect(1195,7,333,68,panel,9);text("FEED: "+liveState,1208,29,14,liveState.equals("LIVE")?green:yellow,true);text("Waktu quote: "+liveTime,1208,51,13,white,false);}
         void drawChart(){
             // PAGE 1: maximize chart area; explanatory and live-journey panels move to later pages.
