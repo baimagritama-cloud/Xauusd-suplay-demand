@@ -67,8 +67,12 @@ public class MainActivity extends Activity {
                 sx=sy=Math.min(W/768f,H/1536f);offX=(W-768f*sx)/2f;offY=(H-1536f*sy)/2f;
                 c.translate(offX,offY);c.scale(sx,sy);drawPortrait();
             }else{
-                sx=sy=Math.max(0.72f,Math.min(W/1536f,H/768f));offX=(W-1536f*sx)/2f;offY=(H-768f*sy)/2f;
-                c.translate(offX,offY);c.scale(sx,sy);fill(bg);c.drawRect(0,0,1536,768,p);header();
+                // Fit the dashboard to the actual external display instead of enforcing
+                // a minimum scale that can crop content on unusual resolutions.
+                // Keep independent layout scales so all available pixels are used; text is
+                // still vector-rendered by Canvas rather than enlarged from a bitmap.
+                sx=W/1536f;sy=H/768f;offX=0f;offY=0f;
+                c.scale(sx,sy);fill(bg);c.drawRect(0,0,1536,768,p);header();
                 for(int i=0;i<10;i++){float x=8+i*77.2f;rect(x,82,72,36,i==selected?colors[i]:panel2,7);center(frames[i],x+36,105,14,i==selected?bg:colors[i],true);}
                 if(pageIndex==0)drawChart();else if(pageIndex==1)drawExplanation();else drawDetail();
                 if(pageIndex>0){rect(8,742,1520,20,0xff241722,4);text("DATA BERSUMBER DARI BIQUOTE • Analisis hanya memakai candle tertutup dan data segar. Sinyal WAIT jika belum terkonfirmasi.",17,756,11,0xffffb3be,true);}
