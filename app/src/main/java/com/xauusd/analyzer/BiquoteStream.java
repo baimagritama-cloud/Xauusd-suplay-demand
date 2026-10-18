@@ -1,58 +1,85 @@
 package com.xauusd.analyzer;
 
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.Log;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import okhttp3.*;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * Read-only Biquote quote client. Uses the documented REST endpoint with allowStale=false.
+ * Polling every 5 seconds avoids falsely labelling a disconnected raw SignalR socket as live.
+ */
 public final class BiquoteStream {
- public interface Listener { void onTick(String price,String spread,String time,String state); void onStatus(String state); }
+ public interface Listener {
+  void onTick(String price,String spread,String time,String state);
+  void onStatus(String state);
+ }
  private final Listener listener;
- private final OkHttpClient http=new OkHttpClient.Builder().pingInterval(20,TimeUnit.SECONDS).retryOnConnectionFailure(true).build();
- private WebSocket socket; private volatile boolean closed=false;
- private final android.os.HandlerThread thread=new android.os.HandlerThread("biquote-reconnect");
- private android.os.Handler handler; private int attempts=0;
- public BiquoteStream(Listener l){listener=l;thread.start();handler=new android.os.Handler(thread.getLooper());}
- public void connect(){closed=false;connectSocket();}
- private void connectSocket(){
+ private final OkHttpClient http=new OkHttpClient.Builder()
+   .connectTimeout(10,TimeUnit.SECONDS).readTimeout(10,TimeUnit.SECONDS)
+   .callTimeout(12,TimeUnit.SECONDS).retryOnConnectionFailure(true).build();
+ private final HandlerThread thread=new HandlerThread("biquote-poll");
+ private Handler handler;
+ private volatile boolean closed=true;
+ private Call activeCall;
+ private int failures=0;
+
+ public BiquoteStream(Listener l){listener=l;thread.start();handler=new Handler(thread.getLooper());}
+ public void connect(){closed=false;handler.removeCallbacksAndMessages(null);poll();}
+ private void poll(){
   if(closed)return;
-  listener.onStatus("CONNECTING");
-  Request req=new Request.Builder().url("wss://biquote.io/hubs/tick").build();
-  socket=http.newWebSocket(req,new WebSocketListener(){
-   @Override public void onOpen(WebSocket ws,Response response){
-    attempts=0;listener.onStatus("CONNECTED — menunggu tick");
-    ws.send("{\"protocol\":\"json\",\"version\":1}\u001e");
-    ws.send("{\"type\":1,\"invocationId\":\"1\",\"target\":\"Subscribe\",\"arguments\":[[\"XAUUSD\"]]}\u001e");
+  listener.onStatus("CHECKING FEED");
+  Request req=new Request.Builder().url("https://biquote.io/api/XAUUSD?allowStale=false")
+    .header("Accept","application/json").build();
+  activeCall=http.newCall(req);
+  activeCall.enqueue(new okhttp3.Callback(){
+   @Override public void onFailure(Call call,IOException e){
+    if(closed)return; failures++;
+    listener.onStatus(failures>=3?"FEED UNAVAILABLE":"RECONNECTING");
+    schedule(failures>=3?15000:5000);
    }
-   @Override public void onMessage(WebSocket ws,String text){
-    try{
-     for(String frame:text.split("\u001e")){
-      if(frame.trim().isEmpty())continue;
-      JSONObject obj=new JSONObject(frame);
-      if(obj.optInt("type")==6)continue;
-      JSONArray args=obj.optJSONArray("arguments");
-      if(args==null||args.length()==0)continue;
-      JSONObject tick=args.optJSONObject(0); if(tick==null)continue;
-      double mid=tick.optDouble("mid",Double.NaN),bid=tick.optDouble("bid",Double.NaN),ask=tick.optDouble("ask",Double.NaN);
-      if(Double.isNaN(mid)&&!Double.isNaN(bid)&&!Double.isNaN(ask))mid=(bid+ask)/2.0;
-      if(Double.isNaN(mid))continue;
-      double spr=tick.optDouble("spread",(!Double.isNaN(ask)&&!Double.isNaN(bid))?ask-bid:Double.NaN);
-      String state=tick.optString("marketState","LIVE");
-      if(tick.optBoolean("stale",false) || tick.optLong("quoteAgeSeconds",0)>300)state="STALE";
-      if("open".equalsIgnoreCase(state)) state="LIVE";
-      if("closed".equalsIgnoreCase(state)) state="MARKET CLOSED";
-      String timestamp=tick.optString("timestamp","");
-      if(timestamp.length()>=19)timestamp=timestamp.substring(11,19);
-      else if(timestamp.isEmpty())timestamp=java.text.DateFormat.getTimeInstance().format(new java.util.Date());
-      listener.onTick(String.format(java.util.Locale.US,"%.2f",mid),Double.isNaN(spr)?"--":String.format(java.util.Locale.US,"%.2f",spr),timestamp,state);
+   @Override public void onResponse(Call call,Response response)throws IOException{
+    try(Response res=response){
+     if(closed)return;
+     if(!res.isSuccessful()||res.body()==null){
+      failures++; listener.onStatus(response.code()==404?"STALE / NO QUOTE":"HTTP "+response.code());
+      schedule(failures>=3?15000:5000); return;
      }
-    }catch(Exception e){Log.w("BiquoteStream","Tick parse failed",e);}
+     try{
+      JSONObject tick=new JSONObject(res.body().string());
+      double mid=tick.optDouble("mid",Double.NaN),bid=tick.optDouble("bid",Double.NaN),ask=tick.optDouble("ask",Double.NaN);
+      if(!Double.isFinite(mid)||mid<=0){
+       failures++;listener.onStatus("INVALID QUOTE");schedule(5000);return;
+      }
+      boolean stale=tick.optBoolean("stale",true)||tick.optLong("quoteAgeSeconds",Long.MAX_VALUE)>300;
+      String market=tick.optString("marketState","unknown");
+      String state=stale?"STALE":("closed".equalsIgnoreCase(market)?"MARKET CLOSED":("open".equalsIgnoreCase(market)?"LIVE":"MARKET "+market.toUpperCase(Locale.US)));
+      String spreadValue=tick.has("spread")?String.format(Locale.US,"%.2f",tick.optDouble("spread",Double.NaN)):
+        ((!Double.isFinite(bid)||!Double.isFinite(ask))?"--":String.format(Locale.US,"%.2f",ask-bid));
+      String stamp=tick.optString("timestamp","");
+      String time="--";
+      try{
+       SimpleDateFormat in=new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss",Locale.US);
+       in.setTimeZone(TimeZone.getTimeZone("UTC"));
+       Date d=in.parse(stamp.substring(0,19));
+       SimpleDateFormat out=new SimpleDateFormat("HH:mm:ss",Locale.US);
+       out.setTimeZone(TimeZone.getDefault());time=out.format(d);
+      }catch(Exception ignored){ }
+      failures=0;
+      listener.onTick(String.format(Locale.US,"%.2f",mid),spreadValue,time,state);
+      schedule(5000);
+     }catch(Exception e){Log.w("BiquoteStream","Invalid quote payload",e);failures++;listener.onStatus("INVALID FEED DATA");schedule(10000);}
+    }
    }
-   @Override public void onFailure(WebSocket ws,Throwable t,Response response){listener.onStatus("RECONNECTING");scheduleReconnect();}
-   @Override public void onClosed(WebSocket ws,int code,String reason){if(!closed)scheduleReconnect();}
   });
  }
- private void scheduleReconnect(){if(closed)return;long delay=Math.min(30000L,1000L*(1L<<Math.min(attempts++,5)));handler.postDelayed(()->connectSocket(),delay);}
- public void close(){closed=true;if(socket!=null)socket.close(1000,"Activity closed");thread.quitSafely();http.dispatcher().executorService().shutdown();}
+ private void schedule(long delay){if(!closed)handler.postDelayed(this::poll,delay);}
+ public void close(){closed=true;handler.removeCallbacksAndMessages(null);if(activeCall!=null)activeCall.cancel();http.dispatcher().executorService().shutdown();http.connectionPool().evictAll();thread.quitSafely();}
 }
