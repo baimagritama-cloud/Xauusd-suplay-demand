@@ -36,7 +36,7 @@ public final class BiquoteStream {
  private void poll(){
   if(closed)return;
   listener.onStatus("CHECKING FEED");
-  Request req=new Request.Builder().url("https://biquote.io/api/XAUUSD?allowStale=false")
+  Request req=new Request.Builder().url("https://biquote.io/api/XAUUSD?allowStale=true")
     .header("Accept","application/json").build();
   activeCall=http.newCall(req);
   activeCall.enqueue(new okhttp3.Callback(){
