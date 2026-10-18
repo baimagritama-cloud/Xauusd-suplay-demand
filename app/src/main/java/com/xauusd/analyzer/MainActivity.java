@@ -19,7 +19,7 @@ public class MainActivity extends Activity {
     private final Map<String,SwingAnalysisEngine.Result> analyses=new HashMap<>();
     private final Map<String,Boolean> freshness=new HashMap<>();
     private final String[] frames={"M1","M5","M15","M30","H1","H4","H8","H12","D1","W1"};
-    private final int[] colors={0xff00e5ff,0xffff00d4,0xffd500ff,0xff2979ff,0xff00f5ff,0xff00ff85,0xffffff00,0xffff6d00,0xffff1744,0xffffc400};
+    private final int[] colors={0xff00d9f5,0xffff35c8,0xffc94dff,0xff398bff,0xff00e6e6,0xff00e879,0xffffdf32,0xffff8a24,0xffff4568,0xffffc83d};
     private int selected=4;
     private int pageIndex=0; // 0=Chart, 1=Keterangan, 2=Ringkasan Multi-Timeframe
     @Override public void onCreate(Bundle b){
@@ -51,11 +51,11 @@ public class MainActivity extends Activity {
 
     private class Dashboard extends View {
         Canvas c; Paint p=new Paint(3); float sx,sy,W,H,offX,offY;
-        final int bg=0xff020713,panel=0xff031326,panel2=0xff061a30,grid=0xff17445e,white=0xfff2fbff,muted=0xff9bb9d4,cyan=0xff00f5ff,red=0xffff1744,blue=0xff2979ff,green=0xff00ff85,yellow=0xffffff00;
+        final int bg=0xff030914,panel=0xff061525,panel2=0xff091d30,grid=0xff1b354a,white=0xfff4f8fc,muted=0xffa7b8ca,cyan=0xff00d9f5,red=0xffff4568,blue=0xff398bff,green=0xff00e879,yellow=0xffffdf32;
         Dashboard(){super(MainActivity.this);setLayerType(View.LAYER_TYPE_HARDWARE,null);setFocusable(true);}
         void fill(int color){p.setColor(color);p.setStyle(Paint.Style.FILL);p.setStrokeWidth(1);}
-        void rect(float x,float y,float w,float h,int color,float radius){fill(color);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.STROKE);p.setColor(0xff087da8);p.setStrokeWidth(1.15f);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.FILL);}
-        void line(float x,float y,float x2,float y2,int color,float width){p.setColor(color);p.setStrokeWidth(width);p.setStyle(Paint.Style.STROKE);c.drawLine(x,y,x2,y2,p);p.setStyle(Paint.Style.FILL);}
+        void rect(float x,float y,float w,float h,int color,float radius){fill(color);p.setAntiAlias(true);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.STROKE);p.setColor(0xff12617a);p.setStrokeWidth(1f);p.setAntiAlias(true);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.FILL);}
+        void line(float x,float y,float x2,float y2,int color,float width){p.setColor(color);p.setAntiAlias(true);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeJoin(Paint.Join.ROUND);p.setStrokeWidth(width);p.setStyle(Paint.Style.STROKE);c.drawLine(x,y,x2,y2,p);p.setStyle(Paint.Style.FILL);}
         void text(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.create("sans-serif",Typeface.BOLD):Typeface.create("sans-serif",Typeface.NORMAL));p.setSubpixelText(true);p.setAntiAlias(true);p.setFilterBitmap(false);c.drawText(s,x,y,p);}
         void center(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.create("sans-serif",Typeface.BOLD):Typeface.create("sans-serif",Typeface.NORMAL));p.setSubpixelText(true);p.setAntiAlias(true);c.drawText(s,x-p.measureText(s)/2,y,p);}
         @Override protected void onDraw(Canvas canvas){
