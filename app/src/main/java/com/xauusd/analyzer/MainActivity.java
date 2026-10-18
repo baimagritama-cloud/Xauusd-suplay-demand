@@ -223,21 +223,31 @@ public class MainActivity extends Activity {
         String selectedTf(){return frames[selected];}
         String fmt(double v){return Double.isFinite(v)?String.format(Locale.US,"%.2f",v):"--";}
         void drawCandles(List<SwingAnalysisEngine.Candle> bars,float x,float y,float w,float h){
-            int start=Math.max(0,bars.size()-100);double lo=Double.MAX_VALUE,hi=-Double.MAX_VALUE;
-            for(int i=start;i<bars.size();i++){SwingAnalysisEngine.Candle b=bars.get(i);lo=Math.min(lo,b.low);hi=Math.max(hi,b.high);}
-            if(!(hi>lo)){hi=lo+1;}
-            for(int i=0;i<=6;i++){float yy=y+i*h/6;line(x,yy,x+w,yy,grid,1);text(fmt(hi-i*(hi-lo)/6),x+w+3,yy+4,10,muted,false);}
-            int n=bars.size()-start;float cw=w/n;
-            for(int i=0;i<n;i++){SwingAnalysisEngine.Candle b=bars.get(start+i);float xx=x+i*cw+cw/2;float yh=y+(float)((hi-b.high)/(hi-lo))*h;float yl=y+(float)((hi-b.low)/(hi-lo))*h;float yo=y+(float)((hi-b.open)/(hi-lo))*h;float yc=y+(float)((hi-b.close)/(hi-lo))*h;int col=b.close>=b.open?green:red;line(xx,yh,xx,yl,col,1.5f);fill(col);float bw=Math.max(2,cw*.62f);c.drawRect(xx-bw/2,Math.min(yo,yc),xx+bw/2,Math.max(Math.min(yo,yc)+2,Math.max(yo,yc)),p);}
+            int start=Math.max(0,bars.size()-100);
+            double lo=Double.MAX_VALUE,hi=-Double.MAX_VALUE;
+            for(int i=start;i<bars.size();i++){
+                SwingAnalysisEngine.Candle b=bars.get(i);
+                lo=Math.min(lo,b.low);hi=Math.max(hi,b.high);
+            }
+            if(!(hi>lo))hi=lo+1;
+            // Reserve a dedicated label rail. Candles and zones never extend beneath it.
+            float railW=218f;
+            float plotW=w-railW;
+            float railX=x+plotW;
+            for(int i=0;i<=6;i++){
+                float yy=y+i*h/6;
+                line(x,yy,x+plotW,yy,grid,1);
+                text(fmt(hi-i*(hi-lo)/6),x+w+3,yy+4,10,muted,false);
+            }
+            int n=bars.size()-start;
+            float cw=plotW/n;
             double current=price();
-            // Multi-timeframe zones: draw subtle fill across the chart, then place readable
-            // compact labels in a dedicated right-side label rail. Avoid stacking all labels at
-            // the same price by assigning each label a separated row while preserving price in text.
+
+            // Draw supply/demand fills FIRST so they remain behind every candle.
             ArrayList<String> zoneLabels=new ArrayList<>();
             ArrayList<Float> zonePriceY=new ArrayList<>();
             ArrayList<Integer> zoneLabelColors=new ArrayList<>();
             ArrayList<Integer> zoneTypes=new ArrayList<>();
-            ArrayList<Integer> zoneTf=new ArrayList<>();
             for(int tf=0;tf<frames.length;tf++){
                 SwingAnalysisEngine.Result zoneResult=analyses.get(frames[tf]);
                 if(zoneResult==null)continue;
@@ -245,25 +255,38 @@ public class MainActivity extends Activity {
                     float z1=y+(float)((hi-z.high)/(hi-lo))*h;
                     float z2=y+(float)((hi-z.low)/(hi-lo))*h;
                     if(z2<y||z1>y+h)continue;
-                    fill(z.supply?red:blue);p.setAlpha(12);c.drawRect(x,Math.max(y,z1),x+w,Math.min(y+h,z2),p);p.setAlpha(255);
+                    fill(z.supply?red:blue);p.setAlpha(12);
+                    c.drawRect(x,Math.max(y,z1),x+plotW,Math.min(y+h,z2),p);
+                    p.setAlpha(255);
                     String tag=frames[tf]+(z.supply?" S ":" D ")+fmt(z.low)+"-"+fmt(z.high);
                     zoneLabels.add(tag);
                     zonePriceY.add(Math.max(y+7,Math.min(y+h-2,(z1+z2)/2)));
                     zoneLabelColors.add(colors[tf]);
                     zoneTypes.add(z.supply?red:blue);
-                    zoneTf.add(tf);
                 }
             }
-            // Price labels must not cover candles: reserve a narrow right-side rail inside the chart
-            // and mask the rail background before drawing the text. Draw the scale on the rail edge.
+
+            // Candles are rendered after zone fills and use only the plot area.
+            for(int i=0;i<n;i++){
+                SwingAnalysisEngine.Candle b=bars.get(start+i);
+                float xx=x+i*cw+cw/2;
+                float yh=y+(float)((hi-b.high)/(hi-lo))*h;
+                float yl=y+(float)((hi-b.low)/(hi-lo))*h;
+                float yo=y+(float)((hi-b.open)/(hi-lo))*h;
+                float yc=y+(float)((hi-b.close)/(hi-lo))*h;
+                int col=b.close>=b.open?green:red;
+                line(xx,yh,xx,yl,col,1.5f);fill(col);
+                float bw=Math.max(2,cw*.62f);
+                c.drawRect(xx-bw/2,Math.min(yo,yc),xx+bw/2,Math.max(Math.min(yo,yc)+2,Math.max(yo,yc)),p);
+            }
+
+            // Timeframe labels are drawn only in the reserved rail, outside the candle area.
             int labelCount=zoneLabels.size();
             int labelStart=Math.max(0,labelCount-12);
             ArrayList<Integer> order=new ArrayList<>();
             for(int i=labelStart;i<labelCount;i++)order.add(i);
             Collections.sort(order,(a,b)->Float.compare(zonePriceY.get(a),zonePriceY.get(b)));
-            float railW=218f;
-            float railX=x+w-railW;
-            fill(0xe8051526);c.drawRect(railX,y, x+w,y+h,p);
+            fill(0xe8051526);c.drawRect(railX,y,x+w,y+h,p);
             line(railX,y,railX,y+h,grid,1);
             int slots=Math.max(1,(int)(h/18f));
             int drawn=Math.min(order.size(),slots);
@@ -277,24 +300,33 @@ public class MainActivity extends Activity {
                 float labelX=x+w-tagW-3;
                 fill(0xf003101e);c.drawRoundRect(labelX,labelY-10,x+w-3,labelY+3,3,3,p);
                 text(tag,labelX+4,labelY,8.5f,zoneLabelColors.get(idx),true);
-                // Connector is confined to the label rail, never drawn across candles.
                 line(railX,target,railX+5,labelY-3,zoneTypes.get(idx),0.8f);
             }
-            // Live-price movement is distinct from timeframe levels: white dashed line,
-            // with a white price tag in the right-side rail so it never hides candles.
+
+            // Live-price movement: white dashed line and white price label.
+            // The line stops at the plot boundary; its label sits in the dedicated rail.
             if(Double.isFinite(current)&&current>=lo&&current<=hi){
                 float liveY=y+(float)((hi-current)/(hi-lo))*h;
                 p.setColor(white);p.setStrokeWidth(1.6f);p.setStyle(Paint.Style.STROKE);
                 p.setPathEffect(new DashPathEffect(new float[]{7f,4f},0));
-                c.drawLine(x,liveY,x+w,liveY,p);
+                c.drawLine(x,liveY,x+plotW,liveY,p);
                 p.setPathEffect(null);p.setStyle(Paint.Style.FILL);
                 String liveLabel=fmt(current);
-                float tagW=58f, tagH=20f, tagX=x+w-tagW-2f;
+                float tagW=58f,tagH=20f,tagX=x+w-tagW-2f;
                 fill(0xfff4f7fb);c.drawRoundRect(tagX,liveY-tagH/2,tagX+tagW,liveY+tagH/2,4,4,p);
                 text(liveLabel,tagX+5,liveY+4,11,0xff061322,true);
             }
-            // Confirmed swing points belong to the selected chart timeframe.
-            SwingAnalysisEngine.Result r=analyses.get(selectedTf());if(r!=null){for(SwingAnalysisEngine.Swing s:r.swings){if(s.index<start||s.index>=bars.size())continue;float xx=x+(s.index-start+.5f)*cw;float yy=y+(float)((hi-s.price)/(hi-lo))*h;center(s.high?"H":"L",xx,yy+(s.high?-5:13),9,s.high?red:green,true);}}
+
+            // Confirmed swing markers remain on top of candles.
+            SwingAnalysisEngine.Result r=analyses.get(selectedTf());
+            if(r!=null){
+                for(SwingAnalysisEngine.Swing s:r.swings){
+                    if(s.index<start||s.index>=bars.size())continue;
+                    float xx=x+(s.index-start+.5f)*cw;
+                    float yy=y+(float)((hi-s.price)/(hi-lo))*h;
+                    center(s.high?"H":"L",xx,yy+(s.high?-5:13),9,s.high?red:green,true);
+                }
+            }
         }
         void drawDetail(){
             rect(8,127,745,604,panel,9);rect(763,127,765,604,panel,9);
