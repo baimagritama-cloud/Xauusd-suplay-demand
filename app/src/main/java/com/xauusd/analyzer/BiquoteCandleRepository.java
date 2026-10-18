@@ -68,8 +68,15 @@ public final class BiquoteCandleRepository {
                     if (!Double.isFinite(o)||!Double.isFinite(h)||!Double.isFinite(l)||!Double.isFinite(cl)
                             || h<Math.max(o,cl)||l>Math.min(o,cl)) continue;
                     long time=0;
-                    try { time=java.time.Instant.parse(b.optString("openTime")).toEpochMilli(); }
-                    catch (Exception ignored) {}
+                    try {
+                        String stamp=b.optString("openTime");
+                        java.text.SimpleDateFormat fmt=new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", java.util.Locale.US);
+                        fmt.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+                        time=fmt.parse(stamp.substring(0,20)).getTime();
+                    } catch (Exception ignored) {
+                        try { time=javax.xml.datatype.DatatypeFactory.newInstance().newXMLGregorianCalendar(b.optString("openTime")).toGregorianCalendar().getTimeInMillis(); }
+                        catch (Exception ignoredAgain) {}
+                    }
                     if(time>0) result.add(new SwingAnalysisEngine.Candle(time,o,h,l,cl));
                 }
                 Collections.sort(result, new Comparator<SwingAnalysisEngine.Candle>() {
