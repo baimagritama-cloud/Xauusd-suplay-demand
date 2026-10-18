@@ -68,22 +68,59 @@ public class MainActivity extends Activity {
             if(bars==null||bars.size()<2){center("Menunggu data OHLC Biquote yang valid...",490,414,19,yellow,true);text(engineStatus,22,179,13,muted,false);return;}
             drawCandles(bars,24,166,934,525);
             text("Bar: "+bars.size()+"   Status: "+(Boolean.TRUE.equals(freshness.get(selectedTf()))?"FRESH":"STALE / WAIT"),22,718,12,Boolean.TRUE.equals(freshness.get(selectedTf()))?green:red,true);
-            text("ANALISIS "+frames[selected],1014,151,16,cyan,true);
-            text("Struktur: "+(result==null?"MENUNGGU":result.structure),1014,180,14,white,true);
-            text("Sinyal: "+(result==null?"WAIT":result.signal),1014,205,14,yellow,true);
-            text(result==null?engineStatus:result.reason,1014,232,12,muted,false);
-            line(1014,248,1510,248,grid,1);
-            text("LEVEL SWING TERKONFIRMASI",1014,271,13,white,true);
-            text("Swing high: "+fmt(result==null?Double.NaN:result.lastConfirmedHigh),1014,298,14,red,true);
-            text("Swing low : "+fmt(result==null?Double.NaN:result.lastConfirmedLow),1014,324,14,green,true);
-            text("ZONA SUPPLY / DEMAND KANDIDAT",1014,357,13,white,true);
-            if(result!=null&&!result.zones.isEmpty()){
-                int shown=0;for(int i=result.zones.size()-1;i>=0&&shown<5;i--){SwingAnalysisEngine.Zone z=result.zones.get(i);int col=z.supply?red:blue;text((z.supply?"SUPPLY ":"DEMAND ")+fmt(z.low)+" - "+fmt(z.high),1014,384+shown*25,12,col,true);shown++;}
-            }else text("Belum ada zona valid terdeteksi.",1014,384,12,muted,false);
-            line(1014,525,1510,525,grid,1);
-            drawPriceJourney(result);
-            text("Ketuk DETAIL untuk riwayat dan konteks multi-timeframe.",1014,682,11,cyan,true);
+            drawLiveNarrative(result);
             rect(1439,690,72,31,panel2,7);center("DETAIL →",1475,710,11,cyan,true);
+        }
+        void drawLiveNarrative(SwingAnalysisEngine.Result selectedResult){
+            text("PERJALANAN HARGA LIVE",1014,153,16,cyan,true);
+            text("Timeframe chart: "+selectedTf()+"  |  Struktur: "+(selectedResult==null?"MENUNGGU":selectedResult.structure),1014,179,11,white,true);
+            text("Harga: "+livePrice+"  |  Feed: "+liveState+"  |  Sinyal: "+(selectedResult==null?"WAIT":selectedResult.signal),1014,201,10.5f,"LIVE".equals(liveState)?green:yellow,true);
+            line(1014,214,1510,214,grid,1);
+            double px=price();
+            boolean fresh=Boolean.TRUE.equals(freshness.get(selectedTf()))&&"LIVE".equals(liveState);
+            if(!Double.isFinite(px)||!fresh){
+                drawWrapped("Data harga belum terverifikasi live. Zona dan struktur yang terlihat hanya konteks historis; kesimpulan arah, retest, dan skenario perjalanan harga ditahan sampai quote serta candle kembali segar.",1014,239,74,11,white,17,7);
+                text("STATUS: WAIT • probabilitas tidak dihitung",1014,407,11,red,true);
+                text("Yang perlu dikonfirmasi",1014,442,12,yellow,true);
+                drawWrapped("1. Quote Biquote berubah dan berstatus LIVE. 2. Candle timeframe terpilih selesai ditutup. 3. Harga benar-benar menyentuh atau menembus zona yang dihitung dari OHLC.",1014,464,74,11,muted,18,6);
+                text("Skenario berikutnya akan tampil setelah data valid.",1014,604,10.5f,cyan,true);
+                text("Detail timeframe, swing, dan riwayat ada di Halaman 2.",1014,625,10,muted,false);
+                return;
+            }
+            SwingAnalysisEngine.Zone nearest=null;String nearestTf="";double dist=Double.MAX_VALUE;
+            for(int tf=0;tf<frames.length;tf++){
+                SwingAnalysisEngine.Result ar=analyses.get(frames[tf]);if(ar==null)continue;
+                for(SwingAnalysisEngine.Zone z:ar.zones){
+                    double d=px<z.low?z.low-px:(px>z.high?px-z.high:0);
+                    if(d<dist){dist=d;nearest=z;nearestTf=frames[tf];}
+                    if(d==0)break;
+                }
+                if(dist==0)break;
+            }
+            List<SwingAnalysisEngine.Candle> bars;
+            synchronized(data){bars=data.get(selectedTf());}
+            String title=nearest==null?"belum ada zona valid":(nearest.supply?"SUPPLY ":"DEMAND ")+nearestTf+" "+fmt(nearest.low)+"–"+fmt(nearest.high);
+            boolean touching=nearest!=null&&nearest.contains(px);
+            text((touching?"ZONA SEDANG DIUJI: ":"ZONA TERDEKAT: ")+title,1014,239,11,touching?yellow:cyan,true);
+            String retest=nearest==null?"Belum ada zona Supply/Demand kandidat yang valid.":retestStatus(nearest,bars);
+            int statusColor=retest.toLowerCase(Locale.US).contains("gagal")?red:(retest.toLowerCase(Locale.US).contains("bertahan")?green:yellow);
+            text("BREAKOUT / RETEST • "+selectedTf(),1014,268,12,statusColor,true);
+            drawWrapped(retest,1014,290,74,10.5f,white,17,5);
+            text("ALUR YANG MUNGKIN TERJADI",1014,393,12,cyan,true);
+            String scenario;
+            if(nearest==null)scenario="Belum ada level yang layak dijadikan acuan. Tunggu zona terkonfirmasi dari candle tertutup.";
+            else if(touching&&nearest.supply)scenario="Jika candle close bearish menjauh dari Supply, penolakan turun dapat dipertimbangkan menuju Demand terdekat yang relevan. Jika candle close menembus batas atas, skenario penolakan batal dan breakout perlu diuji.";
+            else if(touching)scenario="Jika candle close bullish menjauh dari Demand, pantulan naik dapat dipertimbangkan menuju Supply terdekat yang relevan. Jika candle close menembus batas bawah, skenario pantulan batal dan breakdown perlu diuji.";
+            else scenario="Harga belum berada di zona. Pantau apakah harga mendekat, menembus dengan candle close, atau kembali retest. Jangan menganggap penolakan sudah terjadi sebelum ada reaksi.";
+            drawWrapped(scenario,1014,415,74,10.5f,white,17,6);
+            text("BUKTI DAN PEMBATALAN",1014,541,12,yellow,true);
+            String evidence="Bukti: candle close, bentuk reaksi, dan struktur swing "+selectedTf()+". Pembatalan: close menembus sisi berlawanan zona atau struktur baru menyangkal skenario.";
+            drawWrapped(evidence,1014,563,74,10.5f,muted,17,4);
+            text("Tanpa backtest, tidak ada persentase peluang yang diklaim.",1014,652,9.5f,yellow,true);
+        }
+        void drawWrapped(String s,float x,float y,int maxChars,float size,int color,float lineHeight,int maxLines){
+            String[] lines=wrapText(s,maxChars);
+            for(int i=0;i<Math.min(lines.length,maxLines);i++)text(lines[i],x,y+i*lineHeight,size,color,false);
         }
         String retestStatus(SwingAnalysisEngine.Zone z,List<SwingAnalysisEngine.Candle> bars){
             if(z==null||bars==null||bars.size()<4)return "Data candle belum cukup untuk menilai retest.";
