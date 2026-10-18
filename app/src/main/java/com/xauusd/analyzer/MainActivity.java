@@ -232,7 +232,10 @@ public class MainActivity extends Activity {
             if(!(hi>lo))hi=lo+1;
             // Reserve a dedicated label rail. Candles and zones never extend beneath it.
             float railW=218f;
-            float plotW=w-railW;
+            // Keep a visible right-side margin after the newest candle so its wick/body
+            // never touches the plot boundary. Price labels remain in the separate rail.
+            float rightPad=22f;
+            float plotW=w-railW-rightPad;
             float railX=x+plotW;
             for(int i=0;i<=6;i++){
                 float yy=y+i*h/6;
