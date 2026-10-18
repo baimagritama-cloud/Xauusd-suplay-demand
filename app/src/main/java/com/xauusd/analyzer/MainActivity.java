@@ -29,7 +29,24 @@ public class MainActivity extends Activity {
    rect(800,130,360,140,panel,9);text("Struktur Pasar (Swing Terkonfirmasi)",812,151,14,white,true);for(int i=0;i<10;i++){float x=810+i*34;center(tfs[i],x+14,176,10,colors[i],true);center(new String[]{"HL","HL","HL","Side","HL","LH","LH","Side","LH","LH"}[i],x+14,202,10,white,true);center(new String[]{"↑","↑","↑","—","↑","↓","↓","—","↓","↓"}[i],x+14,232,18,i<3?green:red,true);}
    rect(1168,130,360,140,panel,9);text("Ringkasan Analisis",1180,151,14,white,true);text("Trend Pendek",1180,177,12,white,false);text("↑ Bullish (M1–M30)",1310,177,12,green,true);text("Trend Menengah",1180,199,12,white,false);text("— Sideways (H1–H8)",1310,199,12,yellow,true);text("Trend Panjang",1180,221,12,white,false);text("↓ Bearish (H12–W1)",1310,221,12,red,true);text("Zona Terdekat: Supply H4",1180,247,12,muted,false);
    rect(800,278,728,120,panel,9);text("Deteksi Otomatis",812,300,14,white,true);String[] ds={"Breakout","Retest","Belum Ditembus","Reversal"};int[] dc={green,cyan,blue,red};for(int i=0;i<4;i++){rect(812+i*178,310,166,73,panel2,8);text(ds[i],824+i*178,335,13,dc[i],true);center(new String[]{"3","2","4","1"}[i],895+i*178,369,24,dc[i],true);}
-   rect(800,410,728,354,panel,10);text("Halaman 1 / 2",820,440,17,white,true);rect(1450,420,62,40,panel2,8);center("→",1481,447,25,cyan,true);text("Tekan panah untuk Keterangan Detail",820,480,14,muted,false);
+   rect(800,410,728,354,panel,10);text("PENJELASAN DETAIL KONDISI MARKET",816,435,16,cyan,true);rect(1450,418,62,36,panel2,8);center("→",1481,443,24,cyan,true);
+   text("1. KONDISI SEKARANG",816,461,12,yellow,true);
+   text("Harga acuan 2743.21 berada di bawah Supply H4 2745.50–2747.60.",816,480,11,white,false);
+   text("Harga sebelumnya rebound dari Demand H1; sekarang berpotensi menguji area atas lagi.",816,497,11,white,false);
+   text("2. URUTAN RETEST DAN PENOLAKAN",816,520,12,cyan,true);
+   text("• Jika naik kembali ke Supply H4, amati reaksi candle H1 di 2745.50–2747.60.",816,539,11,white,false);
+   text("• Penolakan di H1 + struktur H4 LH setelah HH memperkuat skenario bearish.",816,556,11,white,false);
+   text("• Bila harga turun, target awal Demand H1 2740.20–2742.30.",816,573,11,white,false);
+   text("• Jika Demand H1 ditembus dan retest dari bawah gagal, target berikutnya Demand M30 2737.10–2738.60.",816,590,11,white,false);
+   text("• Jika M30 ikut ditembus, amati Demand M15 2734.25; jangan anggap tembus sebelum candle konfirmasi.",816,607,11,white,false);
+   text("3. SKENARIO ALTERNATIF: BREAKOUT",816,630,12,green,true);
+   text("• Jika candle H1 close di atas 2747.60, skenario penolakan melemah.",816,649,11,white,false);
+   text("• Tunggu retest dari atas; 2747.60 harus bertahan sebagai support (flip level).",816,666,11,white,false);
+   text("• Jika retest bertahan, target berikutnya H8 2750.92, lalu Supply H12 2754.82.",816,683,11,white,false);
+   text("4. KONFIRMASI / PEMBATAL",816,706,12,red,true);
+   text("Jangan simpulkan reversal hanya dari sentuhan zona. Perlu candle close, swing terkonfirmasi,",816,725,11,white,false);
+   text("dan retest yang valid. HH baru H4 atau close H1 di atas 2747.60 membatalkan bias penolakan.",816,742,11,white,false);
+   text("CATATAN: level dan narasi ini masih data contoh/mock, bukan feed XAUUSD real-time.",816,758,10,muted,false);
   }
   void zone(float x,float y,float w,float h,int col,String label){int alpha=col;fill(col);p.setAlpha(65);c.drawRect(x,y,x+w,y+h,p);p.setAlpha(255);p.setStyle(Paint.Style.STROKE);p.setColor(col);p.setStrokeWidth(1.5f);c.drawRect(x,y,x+w,y+h,p);p.setStyle(Paint.Style.FILL);center(label,x+w/2,y+h/2+5,12,white,true);}
   void drawTwo(){header(true);rect(8,80,778,43,panel,9);rect(15,84,160,35,page==0?cyan:panel2,7);center("1  Chart",95,107,15,white,true);rect(177,84,250,35,blue,7);center("2  Keterangan Detail",302,107,15,white,true);rect(800,80,728,43,panel,9);text("Harga Sekarang   2743.21",815,106,15,green,true);
