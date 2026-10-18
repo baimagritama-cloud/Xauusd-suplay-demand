@@ -99,8 +99,26 @@ public class MainActivity extends Activity {
             int n=bars.size()-start;float cw=w/n;
             for(int i=0;i<n;i++){SwingAnalysisEngine.Candle b=bars.get(start+i);float xx=x+i*cw+cw/2;float yh=y+(float)((hi-b.high)/(hi-lo))*h;float yl=y+(float)((hi-b.low)/(hi-lo))*h;float yo=y+(float)((hi-b.open)/(hi-lo))*h;float yc=y+(float)((hi-b.close)/(hi-lo))*h;int col=b.close>=b.open?green:red;line(xx,yh,xx,yl,col,1.5f);fill(col);float bw=Math.max(2,cw*.62f);c.drawRect(xx-bw/2,Math.min(yo,yc),xx+bw/2,Math.max(Math.min(yo,yc)+2,Math.max(yo,yc)),p);}
             double current=price();if(Double.isFinite(current)&&current>=lo&&current<=hi){float yy=y+(float)((hi-current)/(hi-lo))*h;line(x,yy,x+w,yy,yellow,1.5f);text("Harga "+fmt(current),x+8,yy-5,11,yellow,true);}
-            // Overlay confirmed swing points and candidate supply/demand zones from the selected timeframe.
-            SwingAnalysisEngine.Result r=analyses.get(selectedTf());if(r!=null){for(SwingAnalysisEngine.Zone z:r.zones){float z1=y+(float)((hi-z.high)/(hi-lo))*h;float z2=y+(float)((hi-z.low)/(hi-lo))*h;if(z2<y||z1>y+h)continue;fill(z.supply?red:blue);p.setAlpha(28);c.drawRect(x,Math.max(y,z1),x+w,Math.min(y+h,z2),p);p.setAlpha(255);}for(SwingAnalysisEngine.Swing s:r.swings){if(s.index<start||s.index>=bars.size())continue;float xx=x+(s.index-start+.5f)*cw;float yy=y+(float)((hi-s.price)/(hi-lo))*h;center(s.high?"H":"L",xx,yy+(s.high?-5:13),9,s.high?red:green,true);}}
+            // Overlay candidate zones from every timeframe. Zone fill keeps Supply red / Demand blue;
+            // each zone label uses its timeframe's unique color so the source timeframe is identifiable.
+            for(int tf=0;tf<frames.length;tf++){
+                SwingAnalysisEngine.Result zoneResult=analyses.get(frames[tf]);
+                if(zoneResult==null)continue;
+                int tfColor=colors[tf];
+                for(SwingAnalysisEngine.Zone z:zoneResult.zones){
+                    float z1=y+(float)((hi-z.high)/(hi-lo))*h;
+                    float z2=y+(float)((hi-z.low)/(hi-lo))*h;
+                    if(z2<y||z1>y+h)continue;
+                    fill(z.supply?red:blue);p.setAlpha(18);c.drawRect(x,Math.max(y,z1),x+w,Math.min(y+h,z2),p);p.setAlpha(255);
+                    float mid=Math.max(y+9,Math.min(y+h-3,(z1+z2)/2));
+                    String tag=frames[tf]+(z.supply?" SUPPLY":" DEMAND");
+                    float tagW=Math.min(92,p.measureText(tag)+8);
+                    fill(0xee03101e);c.drawRoundRect(x+w-tagW-3,mid-10,x+w-2,mid+3,3,3,p);
+                    text(tag,x+w-tagW,mid,9,tfColor,true);
+                }
+            }
+            // Confirmed swing points belong to the selected chart timeframe.
+            SwingAnalysisEngine.Result r=analyses.get(selectedTf());if(r!=null){for(SwingAnalysisEngine.Swing s:r.swings){if(s.index<start||s.index>=bars.size())continue;float xx=x+(s.index-start+.5f)*cw;float yy=y+(float)((hi-s.price)/(hi-lo))*h;center(s.high?"H":"L",xx,yy+(s.high?-5:13),9,s.high?red:green,true);}}
         }
         void drawDetail(){
             rect(8,127,745,604,panel,9);rect(763,127,765,604,panel,9);
