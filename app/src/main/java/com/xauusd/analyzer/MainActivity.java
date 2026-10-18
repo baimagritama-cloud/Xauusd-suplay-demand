@@ -232,17 +232,18 @@ public class MainActivity extends Activity {
             if(!(hi>lo))hi=lo+1;
             // Reserve a dedicated label rail. Candles and zones never extend beneath it.
             float railW=218f;
-            // Keep a visible right-side margin after the newest candle so its wick/body
-            // never touches the plot boundary. Price labels remain in the separate rail.
-            float rightPad=22f;
-            float plotW=w-railW-rightPad;
+            // Reserve genuine empty space AFTER the newest candle, inside the chart plot,
+            // while keeping the price/zone-label rail completely separate on the right.
+            float rightPad=34f;
+            float plotW=w-railW;
+            float candlePlotW=plotW-rightPad;
             float railX=x+plotW;
             for(int i=0;i<=6;i++){
                 float yy=y+i*h/6;
-                line(x,yy,x+plotW,yy,grid,1);
+                line(x,yy,x+candlePlotW,yy,grid,1);
             }
             int n=bars.size()-start;
-            float cw=plotW/n;
+            float cw=candlePlotW/n;
             double current=price();
 
             // Draw supply/demand fills FIRST so they remain behind every candle.
@@ -316,7 +317,7 @@ public class MainActivity extends Activity {
                 float liveY=y+(float)((hi-current)/(hi-lo))*h;
                 p.setColor(white);p.setStrokeWidth(1.6f);p.setStyle(Paint.Style.STROKE);
                 p.setPathEffect(new DashPathEffect(new float[]{7f,4f},0));
-                c.drawLine(x,liveY,x+plotW,liveY,p);
+                c.drawLine(x,liveY,x+candlePlotW,liveY,p);
                 p.setPathEffect(null);p.setStyle(Paint.Style.FILL);
                 String liveLabel=fmt(current);
                 float tagW=58f,tagH=20f,tagX=x+w-tagW-2f;
