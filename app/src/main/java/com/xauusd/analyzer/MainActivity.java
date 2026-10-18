@@ -64,7 +64,6 @@ public class MainActivity extends Activity {
    text("4. KONFIRMASI / PEMBATAL",816,706,12,red,true);
    text("Jangan simpulkan reversal hanya dari sentuhan zona. Perlu candle close, swing terkonfirmasi,",816,725,11,white,false);
    text("dan retest yang valid. HH baru H4 atau close H1 di atas 2747.60 membatalkan bias penolakan.",816,742,11,white,false);
-   text(engineStatus.length()>95?engineStatus.substring(0,95):engineStatus,816,758,10,muted,false);
   }
   void zone(float x,float y,float w,float h,int col,String label){int alpha=col;fill(col);p.setAlpha(65);c.drawRect(x,y,x+w,y+h,p);p.setAlpha(255);p.setStyle(Paint.Style.STROKE);p.setColor(col);p.setStrokeWidth(1.5f);c.drawRect(x,y,x+w,y+h,p);p.setStyle(Paint.Style.FILL);center(label,x+w/2,y+h/2+5,12,white,true);}
   void drawTwo(){header(true);rect(8,80,778,43,panel,9);rect(15,84,160,35,page==0?cyan:panel2,7);center("1  Chart",95,107,15,white,true);rect(177,84,250,35,blue,7);center("2  Keterangan Detail",302,107,15,white,true);rect(800,80,728,43,panel,9);text("Harga Sekarang   "+livePrice+"   "+liveState,815,106,15,green,true);
