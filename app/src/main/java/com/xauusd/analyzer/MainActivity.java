@@ -99,24 +99,49 @@ public class MainActivity extends Activity {
             int n=bars.size()-start;float cw=w/n;
             for(int i=0;i<n;i++){SwingAnalysisEngine.Candle b=bars.get(start+i);float xx=x+i*cw+cw/2;float yh=y+(float)((hi-b.high)/(hi-lo))*h;float yl=y+(float)((hi-b.low)/(hi-lo))*h;float yo=y+(float)((hi-b.open)/(hi-lo))*h;float yc=y+(float)((hi-b.close)/(hi-lo))*h;int col=b.close>=b.open?green:red;line(xx,yh,xx,yl,col,1.5f);fill(col);float bw=Math.max(2,cw*.62f);c.drawRect(xx-bw/2,Math.min(yo,yc),xx+bw/2,Math.max(Math.min(yo,yc)+2,Math.max(yo,yc)),p);}
             double current=price();if(Double.isFinite(current)&&current>=lo&&current<=hi){float yy=y+(float)((hi-current)/(hi-lo))*h;line(x,yy,x+w,yy,yellow,1.5f);text("Harga "+fmt(current),x+8,yy-5,11,yellow,true);}
-            // Overlay candidate zones from every timeframe. Zone fill keeps Supply red / Demand blue;
-            // each zone label uses its timeframe's unique color so the source timeframe is identifiable.
+            // Multi-timeframe zones: draw subtle fill across the chart, then place readable
+            // compact labels in a dedicated right-side label rail. Avoid stacking all labels at
+            // the same price by assigning each label a separated row while preserving price in text.
+            ArrayList<String> zoneLabels=new ArrayList<>();
+            ArrayList<Float> zonePriceY=new ArrayList<>();
+            ArrayList<Integer> zoneLabelColors=new ArrayList<>();
+            ArrayList<Integer> zoneTypes=new ArrayList<>();
+            ArrayList<Integer> zoneTf=new ArrayList<>();
             for(int tf=0;tf<frames.length;tf++){
                 SwingAnalysisEngine.Result zoneResult=analyses.get(frames[tf]);
                 if(zoneResult==null)continue;
-                int tfColor=colors[tf];
                 for(SwingAnalysisEngine.Zone z:zoneResult.zones){
                     float z1=y+(float)((hi-z.high)/(hi-lo))*h;
                     float z2=y+(float)((hi-z.low)/(hi-lo))*h;
                     if(z2<y||z1>y+h)continue;
-                    fill(z.supply?red:blue);p.setAlpha(18);c.drawRect(x,Math.max(y,z1),x+w,Math.min(y+h,z2),p);p.setAlpha(255);
-                    float mid=Math.max(y+9,Math.min(y+h-3,(z1+z2)/2));
-                    String tag=frames[tf]+(z.supply?" SUPPLY ":" DEMAND ")+fmt(z.low)+"-"+fmt(z.high);
-                    p.setTextSize(9);p.setTypeface(Typeface.DEFAULT_BOLD);
-                    float tagW=Math.min(210,p.measureText(tag)+8);
-                    fill(0xee03101e);c.drawRoundRect(x+w-tagW-3,mid-10,x+w-2,mid+3,3,3,p);
-                    text(tag,x+w-tagW,mid,9,tfColor,true);
+                    fill(z.supply?red:blue);p.setAlpha(12);c.drawRect(x,Math.max(y,z1),x+w,Math.min(y+h,z2),p);p.setAlpha(255);
+                    String tag=frames[tf]+(z.supply?" S ":" D ")+fmt(z.low)+"-"+fmt(z.high);
+                    zoneLabels.add(tag);
+                    zonePriceY.add(Math.max(y+7,Math.min(y+h-2,(z1+z2)/2)));
+                    zoneLabelColors.add(colors[tf]);
+                    zoneTypes.add(z.supply?red:blue);
+                    zoneTf.add(tf);
                 }
+            }
+            // Keep at most the 16 most recent/visible labels so the chart stays legible.
+            int labelCount=zoneLabels.size();
+            int labelStart=Math.max(0,labelCount-16);
+            ArrayList<Integer> order=new ArrayList<>();
+            for(int i=labelStart;i<labelCount;i++)order.add(i);
+            Collections.sort(order,(a,b)->Float.compare(zonePriceY.get(a),zonePriceY.get(b)));
+            float lastLabelY=y-12;
+            for(int idx:order){
+                float target=zonePriceY.get(idx);
+                float labelY=Math.max(target,lastLabelY+13);
+                labelY=Math.min(y+h-2,labelY);
+                lastLabelY=labelY;
+                String tag=zoneLabels.get(idx);
+                p.setTextSize(8.5f);p.setTypeface(Typeface.DEFAULT_BOLD);
+                float tagW=Math.min(222,p.measureText(tag)+8);
+                float labelX=x+w-tagW-3;
+                fill(0xee03101e);c.drawRoundRect(labelX,labelY-10,x+w-2,labelY+2,3,3,p);
+                text(tag,labelX+4,labelY-1,8.5f,zoneLabelColors.get(idx),true);
+                line(x+w-3,target,x+w-3,labelY-5,zoneTypes.get(idx),0.7f);
             }
             // Confirmed swing points belong to the selected chart timeframe.
             SwingAnalysisEngine.Result r=analyses.get(selectedTf());if(r!=null){for(SwingAnalysisEngine.Swing s:r.swings){if(s.index<start||s.index>=bars.size())continue;float xx=x+(s.index-start+.5f)*cw;float yy=y+(float)((hi-s.price)/(hi-lo))*h;center(s.high?"H":"L",xx,yy+(s.high?-5:13),9,s.high?red:green,true);}}
