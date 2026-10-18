@@ -338,137 +338,105 @@ public class MainActivity extends Activity {
         String journeyFor(String tf, double px){
             SwingAnalysisEngine.Result r=analyses.get(tf);
             List<SwingAnalysisEngine.Candle> bars=data.get(tf);
-            boolean tfFresh=Boolean.TRUE.equals(freshness.get(tf));
-            String freshnessText=tfFresh?"data candle segar":"data historis/stale";
-            if(r==null||bars==null||bars.size()<12) return tf+" — data candle belum cukup; posisi retest, breakout, dan zona belum dapat disimpulkan.";
-            StringBuilder out=new StringBuilder();
-            out.append(tf).append(" — struktur ").append(r.structure).append("; ").append(freshnessText).append(". ");
-            if(!Double.isFinite(px)){
-                out.append("Harga acuan belum tersedia, jadi jarak harga ke level belum bisa dihitung.");
-                return out.toString();
-            }
-            SwingAnalysisEngine.Zone nearestSupply=null,nearestDemand=null;
-            double ds=Double.MAX_VALUE,dd=Double.MAX_VALUE;
+            boolean fresh=Boolean.TRUE.equals(freshness.get(tf));
+            if(r==null||bars==null||bars.size()<12) return "Data "+tf+" belum cukup; perjalanan harga dan zona belum dapat dikonfirmasi.";
+            if(!Double.isFinite(px)) return "Harga acuan belum tersedia; level belum bisa dibandingkan.";
+            SwingAnalysisEngine.Zone sup=null,dem=null;
+            double sd=Double.MAX_VALUE,dd=Double.MAX_VALUE;
             for(SwingAnalysisEngine.Zone z:r.zones){
                 double d=px<z.low?z.low-px:(px>z.high?px-z.high:0);
-                if(z.supply&&d<ds){ds=d;nearestSupply=z;}
-                if(!z.supply&&d<dd){dd=d;nearestDemand=z;}
+                if(z.supply&&d<sd){sd=d;sup=z;}
+                if(!z.supply&&d<dd){dd=d;dem=z;}
             }
-            if(Double.isFinite(r.lastConfirmedHigh)){
-                if(px>r.lastConfirmedHigh) out.append("Harga berada di atas swing high terkonfirmasi ").append(fmt(r.lastConfirmedHigh)).append("; ini baru kandidat breakout dan perlu candle close/retest, bukan konfirmasi otomatis. ");
-                else out.append("Swing high terkonfirmasi terdekat yang diketahui: ").append(fmt(r.lastConfirmedHigh)).append(". ");
-            }
-            if(Double.isFinite(r.lastConfirmedLow)){
-                if(px<r.lastConfirmedLow) out.append("Harga berada di bawah swing low terkonfirmasi ").append(fmt(r.lastConfirmedLow)).append("; tunggu close/retest agar tidak menganggapnya breakout palsu. ");
-                else out.append("Swing low terkonfirmasi terdekat yang diketahui: ").append(fmt(r.lastConfirmedLow)).append(". ");
-            }
-            if(nearestSupply!=null){
-                out.append("Kandidat supply terdekat ").append(fmt(nearestSupply.low)).append("–").append(fmt(nearestSupply.high)).append("; ");
-                if(px>=nearestSupply.low&&px<=nearestSupply.high) out.append("harga sedang berada di dalam zona ini, sehingga reaksi/penolakan belum boleh dinyatakan sebelum candle tertutup mengonfirmasi. ");
-                else if(px<nearestSupply.low) out.append("harga berada di bawah zona; jarak ke batas bawah sekitar ").append(fmt(nearestSupply.low-px)).append(". ");
-                else out.append("harga sudah berada di atas zona; perlu uji ulang dari atas sebelum menyebut retest. ");
-            } else out.append("belum ada kandidat supply yang terdeteksi dari displacement pada candle yang tersedia. ");
-            if(nearestDemand!=null){
-                out.append("Kandidat demand terdekat ").append(fmt(nearestDemand.low)).append("–").append(fmt(nearestDemand.high)).append("; ");
-                if(px>=nearestDemand.low&&px<=nearestDemand.high) out.append("harga sedang berada di dalam zona ini; pantau reaksi candle tertutup. ");
-                else if(px>nearestDemand.high) out.append("harga berada di atas zona; jarak ke batas atas sekitar ").append(fmt(px-nearestDemand.high)).append(". ");
-                else out.append("harga berada di bawah zona; demand belum terbukti menahan harga. ");
-            } else out.append("belum ada kandidat demand yang terdeteksi dari displacement pada candle yang tersedia. ");
-            out.append("Sinyal engine: ").append(r.signal).append(". ");
-            return out.toString();
+            String freshness=fresh?"candle tersedia":"data historis/stale";
+            String name,body;
+            boolean inSup=sup!=null&&px>=sup.low&&px<=sup.high;
+            boolean inDem=dem!=null&&px>=dem.low&&px<=dem.high;
+            if(inSup){name="Harga menguji supply "+tf;body="Harga berada di zona supply "+fmt(sup.low)+"–"+fmt(sup.high)+". Tunggu candle tertutup untuk membedakan penolakan dari breakout.";}
+            else if(inDem){name="Harga menguji demand "+tf;body="Harga berada di zona demand "+fmt(dem.low)+"–"+fmt(dem.high)+". Pantau reaksi candle tertutup; sentuhan belum membuktikan pantulan.";}
+            else if(sup!=null&&px<sup.low){name="Menuju supply "+tf;body="Kandidat supply terdekat "+fmt(sup.low)+"–"+fmt(sup.high)+", jarak ke batas bawah "+fmt(sup.low-px)+". Ini level pantauan, bukan kepastian harga akan naik.";}
+            else if(dem!=null&&px>dem.high){name="Menuju demand "+tf;body="Kandidat demand terdekat "+fmt(dem.low)+"–"+fmt(dem.high)+", jarak ke batas atas "+fmt(px-dem.high)+". Ini level pantauan, bukan kepastian harga akan turun.";}
+            else if(Double.isFinite(r.lastConfirmedHigh)&&px>r.lastConfirmedHigh){name="Uji breakout "+tf;body="Harga di atas swing high "+fmt(r.lastConfirmedHigh)+". Breakout baru valid setelah candle close; retest harus terlihat pada candle berikutnya.";}
+            else if(Double.isFinite(r.lastConfirmedLow)&&px<r.lastConfirmedLow){name="Uji breakdown "+tf;body="Harga di bawah swing low "+fmt(r.lastConfirmedLow)+". Tunggu candle close dan uji ulang agar tidak salah membaca breakdown palsu.";}
+            else {name="Konsolidasi "+tf;body="Struktur "+r.structure+"; high "+fmt(r.lastConfirmedHigh)+" dan low "+fmt(r.lastConfirmedLow)+". Tunggu harga mendekati level atau candle close mengonfirmasi arah.";}
+            if(!fresh||!"LIVE".equals(liveState)) body="DATA STALE — "+body+" Kondisi ini historis dan bukan klaim pergerakan live.";
+            return name+". "+body;
         }
         void drawExplanation(){
             double px=price();
             boolean live="LIVE".equals(liveState);
-            // Header and timeframe selector are shared with the other pages. This page follows
-            // the supplied mockup: journey at left; selected-TF interpretation and zones right.
-            rect(8,127,862,604,panel,9);
-            rect(879,127,400,360,panel,9);
-            rect(1287,127,479,360,panel,9);
-            rect(879,495,887,198,panel,9);
-            rect(879,701,887,30,panel,6);
-            text("HALAMAN 2 — PERJALANAN HARGA XAUUSD",22,153,17,cyan,true);
-            drawWrapped("Analisis lintas timeframe berdasarkan struktur, Supply & Demand, breakout, retest, dan level penting terbaru.",22,176,105,11,white,14,2);
-            text("STATUS: "+(live?"FEED LIVE":"FEED STALE — NARASI HISTORIS, BUKAN SINYAL LIVE"),22,208,10.5f,live?green:red,true);
-            text("URUTAN PERJALANAN MULTI-TIMEFRAME",22,231,12,yellow,true);
-            // Ten timeframes in descending-to-short-term order; each row is grounded in the
-            // actual engine output, not invented labels or prices.
-            for(int i=0;i<10;i++){
-                String tf=frames[9-i]; // W1 down to M1
-                int idx=9-i;
-                float y=241+i*47.2f;
+            // Match the supplied reference: 8 numbered journey cards on the left,
+            // selected timeframe detail + zones on the upper right, scenarios below.
+            rect(8,123,744,588,panel,9);
+            rect(762,123,450,311,panel,9);
+            rect(1219,123,309,311,panel,9);
+            rect(762,443,766,168,panel,9);
+            rect(762,620,766,91,panel,9);
+            text("HALAMAN 2 — PERJALANAN HARGA XAUUSD",20,149,17,cyan,true);
+            drawWrapped("Analisis pergerakan harga lintas timeframe berdasarkan struktur, zona Supply & Demand, breakout, retest, dan level penting.",20,171,91,11,white,13,2);
+            text("STATUS: "+(live?"FEED LIVE":"FEED STALE — REFERENSI HISTORIS, BUKAN SINYAL LIVE"),20,197,10,live?green:red,true);
+            // Main path is ordered weekly -> intraday and numbered like the mockup.
+            String[] order={"W1","D1","H4","H1","M30","M15","M5","M1"};
+            String[] titles={"Tren utama / konteks mingguan","Konsolidasi / zona harian","Reaksi dari zona H4","Uji ulang level H1","Breakout / range M30","Reaksi resistance M15","Arah menuju level M5","Struktur intraday M1"};
+            for(int i=0;i<8;i++){
+                String tf=order[i]; int idx=Arrays.asList(frames).indexOf(tf);
+                float y=207+i*61.5f;
                 SwingAnalysisEngine.Result rr=analyses.get(tf);
                 boolean fresh=Boolean.TRUE.equals(freshness.get(tf));
-                rect(18,y,842,44,panel2,5);
-                rect(26,y+6,52,30,0xff0b2437,5);
-                center(tf,52,y+26,11,colors[idx],true);
-                text(rr==null?"MENUNGGU":rr.structure,89,y+16,10.5f, fresh?white:muted,true);
-                text(fresh?"FRESH":"STALE",89,y+31,9, fresh?green:red,true);
-                drawWrapped(journeyFor(tf,px),155,y+14,91,9.7f,white,11.5f,2);
-                if(rr!=null){
-                    text("H "+fmt(rr.lastConfirmedHigh),748,y+17,9.5f,muted,false);
-                    text("L "+fmt(rr.lastConfirmedLow),748,y+32,9.5f,muted,false);
-                }else{
-                    text("H —",748,y+17,9.5f,muted,false);text("L —",748,y+32,9.5f,muted,false);
-                }
+                rect(17,y,725,57,panel2,6);
+                rect(25,y+10,31,31,i%2==0?0xff2263b5:0xff574184,18);
+                center(""+(i+1),40.5f,y+31,13,white,true);
+                rect(63,y+9,49,33,0xff0b263b,5);
+                center(tf,87.5f,y+30,11,colors[Math.max(0,idx)],true);
+                text(titles[i],122,y+17,10.5f,colors[Math.max(0,idx)],true);
+                drawWrapped(journeyFor(tf,px),122,y+34,77,9.5f,white,11,2);
+                text("High: "+fmt(rr==null?Double.NaN:rr.lastConfirmedHigh),646,y+19,8.5f,muted,false);
+                text("Low: "+fmt(rr==null?Double.NaN:rr.lastConfirmedLow),646,y+36,8.5f,muted,false);
             }
-            SwingAnalysisEngine.Result selectedResult=analyses.get(selectedTf());
-            List<SwingAnalysisEngine.Candle> selectedBars=data.get(selectedTf());
-            boolean selectedFresh=Boolean.TRUE.equals(freshness.get(selectedTf()));
-            text("DETAIL ANALISIS • "+selectedTf(),893,153,14,cyan,true);
-            text("Struktur",893,181,11,muted,false);
-            text(": "+(selectedResult==null?"DATA BELUM CUKUP":selectedResult.structure),1002,181,11,white,true);
-            text("Kondisi data",893,204,11,muted,false);
-            text(": "+(selectedFresh?"CANDLE SEGAR":"STALE / DATA BELUM TERSEDIA"),1002,204,10.5f,selectedFresh?green:red,true);
-            text("Harga acuan",893,227,11,muted,false);
-            text(": "+livePrice,1002,227,11,live?green:red,true);
-            text("High terakhir: "+fmt(selectedResult==null?Double.NaN:selectedResult.lastConfirmedHigh),893,252,10.5f,white,false);
-            text("Low terakhir : "+fmt(selectedResult==null?Double.NaN:selectedResult.lastConfirmedLow),893,273,10.5f,white,false);
-            text("INTERPRETASI",893,299,12,yellow,true);
-            String detailNarrative;
-            if(selectedResult==null||selectedBars==null||selectedBars.size()<12){
-                detailNarrative="Data OHLC timeframe "+selectedTf()+" belum cukup untuk membaca retest, breakout, atau penolakan. Tunggu data valid.";
-            }else if(!live){
-                detailNarrative="Feed berstatus STALE. Level yang ditampilkan berasal dari candle tersimpan; tidak dapat dipastikan harga sedang retest/menembus sekarang. Tunggu quote dan candle baru.";
-            }else{
-                detailNarrative=journeyFor(selectedTf(),px)+" Sinyal saat ini: "+selectedResult.signal+".";
+            SwingAnalysisEngine.Result r=analyses.get(selectedTf());
+            List<SwingAnalysisEngine.Candle> bars=data.get(selectedTf());
+            boolean fresh=Boolean.TRUE.equals(freshness.get(selectedTf()));
+            text("DETAIL ANALISIS TIMEFRAME TERPILIH ("+selectedTf()+")",776,149,12.5f,cyan,true);
+            text("Struktur",776,176,10.5f,muted,false);text(": "+(r==null?"DATA BELUM CUKUP":r.structure),856,176,10.5f,white,true);
+            text("Kondisi",776,197,10.5f,muted,false);text(": "+(fresh&&live?"CANDLE SEGAR":"STALE / HISTORIS"),856,197,10.5f,fresh&&live?green:red,true);
+            text("Harga sekarang",776,218,10.5f,muted,false);text(": "+livePrice,856,218,11,live?green:red,true);
+            text("Level terdekat",776,241,11,yellow,true);
+            SwingAnalysisEngine.Zone ns=null,nd=null;double ds=Double.MAX_VALUE,dd=Double.MAX_VALUE;
+            if(r!=null&&Double.isFinite(px)) for(SwingAnalysisEngine.Zone z:r.zones){
+                double d=px<z.low?z.low-px:(px>z.high?px-z.high:0);
+                if(z.supply&&d<ds){ds=d;ns=z;}if(!z.supply&&d<dd){dd=d;nd=z;}
             }
-            drawWrapped(detailNarrative,893,321,70,10.2f,white,13,7);
-            text("BAR TERAKHIR",893,431,10.5f,cyan,true);
-            if(selectedBars!=null&&!selectedBars.isEmpty()){
-                SwingAnalysisEngine.Candle b=selectedBars.get(selectedBars.size()-1);
-                drawWrapped("O "+fmt(b.open)+"  H "+fmt(b.high)+"  L "+fmt(b.low)+"  C "+fmt(b.close),893,450,70,10,muted,12,2);
-            }else text("OHLC belum tersedia",893,451,10,muted,false);
-            text("ZONA SUPPLY & DEMAND",1301,153,13,cyan,true);
-            if(selectedResult!=null){
-                int supplyCount=0,demandCount=0;
-                for(SwingAnalysisEngine.Zone z:selectedResult.zones){
-                    if(supplyCount+demandCount>=5) break;
-                    if(z.supply&&supplyCount<2){
-                        float yy=176+supplyCount*52;
-                        rect(1300,yy,451,42,0xff301c2b,5);text("SUPPLY "+(supplyCount+1),1310,yy+16,10,0xffff6479,true);
-                        text(fmt(z.low)+" – "+fmt(z.high),1450,yy+26,10,white,false);supplyCount++;
-                    }else if(!z.supply&&demandCount<2){
-                        float yy=286+demandCount*52;
-                        rect(1300,yy,451,42,0xff0c332b,5);text("DEMAND "+(demandCount+1),1310,yy+16,10,0xff25df88,true);
-                        text(fmt(z.low)+" – "+fmt(z.high),1450,yy+26,10,white,false);demandCount++;
-                    }
+            text("● Supply: "+(ns==null?"belum terdeteksi":fmt(ns.low)+" – "+fmt(ns.high)),786,263,9.7f,0xffff6378,true);
+            text("● Level kunci: "+(r==null?"—":fmt(r.lastConfirmedHigh)+" / "+fmt(r.lastConfirmedLow)),786,283,9.7f,yellow,true);
+            text("● Demand: "+(nd==null?"belum terdeteksi":fmt(nd.low)+" – "+fmt(nd.high)),786,303,9.7f,green,true);
+            text("Interpretasi:",776,327,11,white,true);
+            String interpretation;
+            if(!live||!fresh) interpretation="Feed stale: level berikut adalah konteks candle tersimpan. Tidak bisa dipastikan harga sedang retest/menembus sekarang.";
+            else interpretation=journeyFor(selectedTf(),px);
+            drawWrapped(interpretation,776,345,57,9.4f,white,11,7);
+            text("BAR TERAKHIR",776,414,9.5f,cyan,true);
+            if(bars!=null&&!bars.isEmpty()){SwingAnalysisEngine.Candle b=bars.get(bars.size()-1);text("O "+fmt(b.open)+"  H "+fmt(b.high)+"  L "+fmt(b.low)+"  C "+fmt(b.close),868,414,9,muted,false);}
+            text("ZONA SUPPLY & DEMAND "+selectedTf(),1232,149,12,cyan,true);
+            if(r!=null){
+                int si=0,di=0;
+                for(SwingAnalysisEngine.Zone z:r.zones){
+                    if(z.supply&&si<2){float yy=166+si*49;rect(1230,yy,284,40,0xff301c2b,5);text("Supply "+(si+1),1240,yy+15,10,0xffff6378,true);text(fmt(z.low)+" – "+fmt(z.high),1240,yy+30,10,white,false);si++;}
+                    else if(!z.supply&&di<2){float yy=266+di*49;rect(1230,yy,284,40,0xff0c332b,5);text("Demand "+(di+1),1240,yy+15,10,green,true);text(fmt(z.low)+" – "+fmt(z.high),1240,yy+30,10,white,false);di++;}
                 }
-                if(supplyCount==0) text("Supply: —",1305,190,10,muted,false);
-                if(demandCount==0) text("Demand: —",1305,300,10,muted,false);
-            }else{text("Supply: —",1420,190,9.5f,muted,false);text("Demand: —",1420,300,9.5f,muted,false);}
-            text("SKENARIO PERGERAKAN HARGA",893,519,14,cyan,true);
-            rect(892,531,426,148,0xff061f1c,6);
-            rect(1327,531,425,148,0xff28151e,6);
-            text("BULLISH • SYARAT KONFIRMASI",904,552,11,green,true);
-            text("BEARISH • SYARAT KONFIRMASI",1339,552,11,red,true);
-            String bullish="1. Candle tertutup bertahan di atas swing/level terdekat. 2. Breakout harus close melewati high terkonfirmasi. 3. Retest dari atas disertai reaksi baru. 4. Target berikutnya hanya level supply terdeteksi.";
-            String bearish="1. Candle gagal bertahan di atas level kunci. 2. Close menembus swing low terkonfirmasi. 3. Retest dari bawah gagal naik. 4. Target berikutnya hanya level demand terdeteksi.";
-            if(!live){bullish="Feed STALE: skenario bullish hanya bersyarat, belum aktif. Tunggu quote segar, candle close, lalu retest terkonfirmasi.";bearish="Feed STALE: skenario bearish hanya bersyarat, belum aktif. Jangan menganggap penembusan terjadi tanpa candle baru.";}
-            drawWrapped(bullish,904,575,62,10.2f,white,14,7);
-            drawWrapped(bearish,1339,575,62,10.2f,white,14,7);
-            text("CATATAN: candle tertutup • sentuhan zona bukan bukti penolakan • breakout perlu close • aplikasi hanya membaca data",893,721,10,0xffffb3be,true);
-            rect(1324,686,186,30,panel2,7);center("RINGKASAN →",1417,706,11,cyan,true);
+                if(si==0)text("Supply: belum terdeteksi",1234,188,9.5f,muted,false);
+                if(di==0)text("Demand: belum terdeteksi",1234,288,9.5f,muted,false);
+            }
+            text("SKENARIO PERGERAKAN HARGA",776,467,13,cyan,true);
+            rect(774,478,373,119,0xff06251e,6);rect(1154,478,361,119,0xff2b1720,6);
+            text("↗ SKENARIO BULLISH",786,497,10.5f,green,true);
+            text("↘ SKENARIO BEARISH",1166,497,10.5f,red,true);
+            String bull="1. Bertahan di atas level kunci. 2. Candle close menembus supply. 3. Retest dari atas berhasil. 4. Level target berikutnya mengikuti supply terdeteksi.";
+            String bear="1. Gagal bertahan di level kunci. 2. Candle close menembus swing low. 3. Retest dari bawah gagal. 4. Pantau demand berikutnya.";
+            if(!live||!fresh){bull="Feed STALE: skenario bullish belum aktif. Tunggu quote segar, candle close, dan retest terkonfirmasi.";bear="Feed STALE: skenario bearish belum aktif. Jangan anggap penembusan terjadi tanpa candle baru.";}
+            drawWrapped(bull,786,516,54,9.5f,white,12,6);drawWrapped(bear,1166,516,52,9.5f,white,12,6);
+            text("⚠ CATATAN PENTING",776,644,12,yellow,true);
+            drawWrapped("Analisis berdasarkan candle tertutup. Sentuhan zona bukan bukti penolakan. Level dapat berubah saat data baru datang. Konfirmasi pergerakan berikutnya pada chart.",776,665,125,9.5f,white,12,3);
+            rect(1360,680,151,26,panel2,6);center("RINGKASAN →",1435,698,10,cyan,true);
         }
         void drawDetail(){
             rect(8,127,745,604,panel,9);rect(763,127,765,604,panel,9);
