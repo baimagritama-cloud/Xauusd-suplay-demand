@@ -249,8 +249,12 @@ public class MainActivity extends Activity {
             // Draw supply/demand fills FIRST so they remain behind every candle.
             ArrayList<String> zoneLabels=new ArrayList<>();
             ArrayList<Float> zonePriceY=new ArrayList<>();
+            ArrayList<Float> zoneTopY=new ArrayList<>();
+            ArrayList<Float> zoneBottomY=new ArrayList<>();
             ArrayList<Integer> zoneLabelColors=new ArrayList<>();
             ArrayList<Integer> zoneTypes=new ArrayList<>();
+            ArrayList<Integer> zoneFills=new ArrayList<>();
+            ArrayList<Integer> zoneBorders=new ArrayList<>();
             for(int tf=0;tf<frames.length;tf++){
                 SwingAnalysisEngine.Result zoneResult=analyses.get(frames[tf]);
                 if(zoneResult==null)continue;
@@ -258,14 +262,30 @@ public class MainActivity extends Activity {
                     float z1=y+(float)((hi-z.high)/(hi-lo))*h;
                     float z2=y+(float)((hi-z.low)/(hi-lo))*h;
                     if(z2<y||z1>y+h)continue;
-                    // Do not paint zone fills across the candle plot: candle bodies and wicks
-                    // must remain completely unobstructed, even by transparent overlays.
+                    int base=colors[tf];
+                    int border=(base&0x00ffffff)|0xc9000000;
+                    int translucent=(base&0x00ffffff)|0x2d000000;
                     String tag=frames[tf]+(z.supply?" S ":" D ")+fmt(z.low)+"-"+fmt(z.high);
                     zoneLabels.add(tag);
                     zonePriceY.add(Math.max(y+7,Math.min(y+h-2,(z1+z2)/2)));
-                    zoneLabelColors.add(colors[tf]);
-                    zoneTypes.add(z.supply?red:blue);
+                    zoneTopY.add(Math.max(y,Math.min(y+h,z1)));
+                    zoneBottomY.add(Math.max(y,Math.min(y+h,z2)));
+                    zoneLabelColors.add(base);
+                    zoneTypes.add(border);
+                    zoneFills.add(translucent);
+                    zoneBorders.add(border);
                 }
+            }
+            // Paint translucent multi-timeframe zones behind the candles. Each zone uses
+            // its timeframe's own color, and its midpoint will connect to the matching label
+            // in the dedicated right-side rail. Candles are drawn on top for readability.
+            for(int i=0;i<zoneLabels.size();i++){
+                float top=zoneTopY.get(i),bottom=zoneBottomY.get(i);
+                fill(zoneFills.get(i));
+                c.drawRect(x,top,x+candlePlotW,bottom,p);
+                p.setColor(zoneBorders.get(i));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1f);
+                c.drawRect(x,top,x+candlePlotW,bottom,p);
+                p.setStyle(Paint.Style.FILL);
             }
 
             // Candles are rendered after zone fills and use only the plot area.
@@ -308,7 +328,10 @@ public class MainActivity extends Activity {
                 float labelX=x+w-tagW-3;
                 fill(0xf003101e);c.drawRoundRect(labelX,labelY-10,x+w-3,labelY+3,3,3,p);
                 text(tag,labelX+4,labelY,8.5f,zoneLabelColors.get(idx),true);
-                line(railX,target,railX+5,labelY-3,zoneTypes.get(idx),0.8f);
+                // Connector visually ties the colored zone midpoint to its right-side label.
+                line(x+candlePlotW,target,railX+3,labelY-3,zoneTypes.get(idx),1.2f);
+                fill(zoneLabelColors.get(idx));
+                c.drawCircle(x+candlePlotW,target,3f,p);
             }
 
             // Live-price movement: white dashed line and white price label.
