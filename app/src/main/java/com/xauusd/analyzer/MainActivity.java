@@ -312,7 +312,7 @@ public class MainActivity extends Activity {
 
             // Timeframe labels are drawn only in the reserved rail, outside the candle area.
             int labelCount=zoneLabels.size();
-            int labelStart=Math.max(0,labelCount-12);
+            int labelStart=0;
             ArrayList<Integer> order=new ArrayList<>();
             for(int i=labelStart;i<labelCount;i++)order.add(i);
             Collections.sort(order,(a,b)->Float.compare(zonePriceY.get(a),zonePriceY.get(b)));
@@ -324,7 +324,7 @@ public class MainActivity extends Activity {
                 float yy=y+i*h/6;
                 text(fmt(hi-i*(hi-lo)/6),railX+6,yy+4,9.5f,muted,false);
             }
-            int slots=Math.max(1,(int)(h/18f));
+            int slots=Math.max(1,(int)(h/22f));
             int drawn=Math.min(order.size(),slots);
             for(int j=0;j<drawn;j++){
                 int idx=order.get(j);
@@ -335,9 +335,10 @@ public class MainActivity extends Activity {
                 float tagW=Math.min(railW-8,p.measureText(tag)+8);
                 float labelX=x+w-tagW-3;
                 fill(0xf003101e);c.drawRoundRect(labelX,labelY-10,x+w-3,labelY+3,3,3,p);
+                p.setColor(zoneTypes.get(idx));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1f);c.drawRoundRect(labelX,labelY-10,x+w-3,labelY+3,3,3,p);p.setStyle(Paint.Style.FILL);
                 text(tag,labelX+4,labelY,8.5f,zoneLabelColors.get(idx),true);
                 // Connector visually ties the colored zone midpoint to its right-side label.
-                line(x+candlePlotW,target,railX+3,labelY-3,zoneTypes.get(idx),1.2f);
+                line(x+candlePlotW,target,labelX,labelY-3,zoneTypes.get(idx),1.4f);
                 fill(zoneLabelColors.get(idx));
                 c.drawCircle(x+candlePlotW,target,3f,p);
             }
