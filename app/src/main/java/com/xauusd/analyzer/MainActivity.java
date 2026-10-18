@@ -123,25 +123,31 @@ public class MainActivity extends Activity {
                     zoneTf.add(tf);
                 }
             }
-            // Keep at most the 16 most recent/visible labels so the chart stays legible.
+            // Price labels must not cover candles: reserve a narrow right-side rail inside the chart
+            // and mask the rail background before drawing the text. Draw the scale on the rail edge.
             int labelCount=zoneLabels.size();
-            int labelStart=Math.max(0,labelCount-16);
+            int labelStart=Math.max(0,labelCount-12);
             ArrayList<Integer> order=new ArrayList<>();
             for(int i=labelStart;i<labelCount;i++)order.add(i);
             Collections.sort(order,(a,b)->Float.compare(zonePriceY.get(a),zonePriceY.get(b)));
-            float lastLabelY=y-12;
-            for(int idx:order){
+            float railW=218f;
+            float railX=x+w-railW;
+            fill(0xe8051526);c.drawRect(railX,y, x+w,y+h,p);
+            line(railX,y,railX,y+h,grid,1);
+            int slots=Math.max(1,(int)(h/18f));
+            int drawn=Math.min(order.size(),slots);
+            for(int j=0;j<drawn;j++){
+                int idx=order.get(j);
                 float target=zonePriceY.get(idx);
-                float labelY=Math.max(target,lastLabelY+13);
-                labelY=Math.min(y+h-2,labelY);
-                lastLabelY=labelY;
+                float labelY=y+10+j*((h-20f)/Math.max(1,drawn-1));
                 String tag=zoneLabels.get(idx);
                 p.setTextSize(8.5f);p.setTypeface(Typeface.DEFAULT_BOLD);
-                float tagW=Math.min(222,p.measureText(tag)+8);
+                float tagW=Math.min(railW-8,p.measureText(tag)+8);
                 float labelX=x+w-tagW-3;
-                fill(0xee03101e);c.drawRoundRect(labelX,labelY-10,x+w-2,labelY+2,3,3,p);
-                text(tag,labelX+4,labelY-1,8.5f,zoneLabelColors.get(idx),true);
-                line(x+w-3,target,x+w-3,labelY-5,zoneTypes.get(idx),0.7f);
+                fill(0xf003101e);c.drawRoundRect(labelX,labelY-10,x+w-3,labelY+3,3,3,p);
+                text(tag,labelX+4,labelY,8.5f,zoneLabelColors.get(idx),true);
+                // Connector is confined to the label rail, never drawn across candles.
+                line(railX,target,railX+5,labelY-3,zoneTypes.get(idx),0.8f);
             }
             // Confirmed swing points belong to the selected chart timeframe.
             SwingAnalysisEngine.Result r=analyses.get(selectedTf());if(r!=null){for(SwingAnalysisEngine.Swing s:r.swings){if(s.index<start||s.index>=bars.size())continue;float xx=x+(s.index-start+.5f)*cw;float yy=y+(float)((hi-s.price)/(hi-lo))*h;center(s.high?"H":"L",xx,yy+(s.high?-5:13),9,s.high?red:green,true);}}
