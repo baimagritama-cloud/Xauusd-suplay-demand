@@ -61,15 +61,15 @@ public class MainActivity extends Activity {
         @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);c=canvas;W=getWidth();H=getHeight();sx=W/1536f;sy=H/768f;c.save();c.scale(sx,sy);fill(bg);c.drawRect(0,0,1536,768,p);header();for(int i=0;i<10;i++){float x=8+i*77.2f;rect(x,82,72,36,i==selected?colors[i]:panel2,7);center(frames[i],x+36,105,14,i==selected?bg:colors[i],true);}if(page2)drawDetail();else drawChart();rect(8,742,1520,20,0xff241722,4);text("DATA BERSUMBER DARI BIQUOTE • Analisis hanya memakai candle tertutup dan data segar. Sinyal WAIT jika belum terkonfirmasi.",17,756,11,0xffffb3be,true);c.restore();}
         void header(){rect(8,7,780,68,panel,9);text("◆",20,51,42,0xffffc629,true);text("XAUUSD Analyzer",82,34,26,white,true);text("MULTI-TIMEFRAME • HH/HL/LH/LL • SUPPLY & DEMAND",83,57,12,muted,false);rect(800,7,250,68,panel,9);text("HARGA SEKARANG",814,26,11,muted,true);text(livePrice,814,53,25,green,true);rect(1060,7,125,68,panel,9);text("SPREAD",1073,26,11,muted,true);text(liveSpread,1073,51,22,white,true);rect(1195,7,333,68,panel,9);text("FEED: "+liveState,1208,29,14,liveState.equals("LIVE")?green:yellow,true);text("Waktu quote: "+liveTime,1208,51,13,white,false);}
         void drawChart(){
-            rect(8,127,980,604,panel,9);rect(998,127,530,604,panel,9);
-            List<SwingAnalysisEngine.Candle> bars; SwingAnalysisEngine.Result result;
-            synchronized(data){bars=data.get(selectedTf());result=analyses.get(selectedTf());}
-            text("CHART CANDLE TERTUTUP • "+frames[selected]+" • 300 BAR MAKSIMUM",21,150,14,white,true);
-            if(bars==null||bars.size()<2){center("Menunggu data OHLC Biquote yang valid...",490,414,19,yellow,true);text(engineStatus,22,179,13,muted,false);return;}
-            drawCandles(bars,24,166,934,525);
-            text("Bar: "+bars.size()+"   Status: "+(Boolean.TRUE.equals(freshness.get(selectedTf()))?"FRESH":"STALE / WAIT"),22,718,12,Boolean.TRUE.equals(freshness.get(selectedTf()))?green:red,true);
-            drawLiveNarrative(result);
-            rect(1439,690,72,31,panel2,7);center("DETAIL →",1475,710,11,cyan,true);
+            // PAGE 1: maximize chart area; explanatory and live-journey panels move to later pages.
+            rect(8,127,1520,604,panel,9);
+            List<SwingAnalysisEngine.Candle> bars;
+            synchronized(data){bars=data.get(selectedTf());}
+            text("CHART CANDLE TERTUTUP • "+frames[selected]+" • HINGGA 300 CANDLE",21,150,14,white,true);
+            if(bars==null||bars.size()<2){center("Menunggu data OHLC Biquote yang valid...",768,414,19,yellow,true);text(engineStatus,22,179,13,muted,false);return;}
+            drawCandles(bars,24,166,1480,525);
+            text("Bar tersedia: "+bars.size()+"   Ditampilkan: "+Math.min(300,bars.size())+"   Status: "+(Boolean.TRUE.equals(freshness.get(selectedTf()))?"FRESH":"STALE / WAIT"),22,718,12,Boolean.TRUE.equals(freshness.get(selectedTf()))?green:red,true);
+            rect(1427,690,84,31,panel2,7);center("DETAIL →",1469,710,11,cyan,true);
         }
         void drawLiveNarrative(SwingAnalysisEngine.Result selectedResult){
             text("PERJALANAN HARGA LIVE",1014,153,16,cyan,true);
@@ -223,7 +223,7 @@ public class MainActivity extends Activity {
         String selectedTf(){return frames[selected];}
         String fmt(double v){return Double.isFinite(v)?String.format(Locale.US,"%.2f",v):"--";}
         void drawCandles(List<SwingAnalysisEngine.Candle> bars,float x,float y,float w,float h){
-            int start=Math.max(0,bars.size()-100);
+            int start=Math.max(0,bars.size()-300);
             double lo=Double.MAX_VALUE,hi=-Double.MAX_VALUE;
             for(int i=start;i<bars.size();i++){
                 SwingAnalysisEngine.Candle b=bars.get(i);
