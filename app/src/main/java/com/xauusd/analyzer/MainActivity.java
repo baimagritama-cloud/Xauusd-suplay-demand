@@ -118,7 +118,7 @@ public class MainActivity extends Activity {
             List<SwingAnalysisEngine.Candle> bars;
             synchronized(data){bars=data.get(selectedTf());}
             text("CHART CANDLE TERTUTUP • "+frames[selected]+" • HINGGA 300 CANDLE",21,150,14,white,true);
-            if(bars==null||bars.size()<2){center("Menunggu data OHLC Biquote yang valid...",768,414,23.75,yellow,true);text(engineStatus,22,179,16.25,muted,false);return;}
+            if(bars==null||bars.size()<2){center("Menunggu data OHLC Biquote yang valid...",768,414,23.75f,yellow,true);text(engineStatus,22,179,16.25f,muted,false);return;}
             drawCandles(bars,24,166,1480,525);
             text("Bar tersedia: "+bars.size()+"   Ditampilkan: "+Math.min(300,bars.size())+"   Status: "+(Boolean.TRUE.equals(freshness.get(selectedTf()))?"FRESH":"STALE / WAIT"),22,718,15,Boolean.TRUE.equals(freshness.get(selectedTf()))?green:red,true);
             rect(1427,690,84,31,panel2,7);center("DETAIL →",1469,710,11,cyan,true);
@@ -406,7 +406,7 @@ public class MainActivity extends Activity {
                 String liveLabel=fmt(current);
                 float tagW=58f,tagH=20f,tagX=x+w-tagW-2f;
                 fill(0xfff4f7fb);c.drawRoundRect(tagX,liveY-tagH/2,tagX+tagW,liveY+tagH/2,4,4,p);
-                text(liveLabel,tagX+5,liveY+4,13.75,0xff061322,true);
+                text(liveLabel,tagX+5,liveY+4,13.75f,0xff061322,true);
             }
 
             // Confirmed swing markers remain on top of candles.
@@ -458,7 +458,7 @@ public class MainActivity extends Activity {
             rect(762,443,766,168,panel,9);
             rect(762,620,766,91,panel,9);
             text("HALAMAN 2 — PERJALANAN HARGA XAUUSD",20,149,17,cyan,true);
-            drawWrapped("Analisis pergerakan harga lintas timeframe berdasarkan struktur, zona Supply & Demand, breakout, retest, dan level penting.",20,169,88,13.13f,white,14.4,2);
+            drawWrapped("Analisis pergerakan harga lintas timeframe berdasarkan struktur, zona Supply & Demand, breakout, retest, dan level penting.",20,169,88,13.13f,white,14.4f,2);
             text("STATUS: "+(live?"FEED LIVE":"FEED STALE — REFERENSI HISTORIS, BUKAN SINYAL LIVE"),20,199,11.88f,live?green:red,true);
             // Main path is ordered weekly -> intraday and numbered like the mockup.
             String[] order={"W1","D1","H4","H1","M30","M15","M5","M1"};
@@ -472,10 +472,10 @@ public class MainActivity extends Activity {
                 String narrativeTitle=stop>0?narrative.substring(0,stop):"Perjalanan harga "+tf;
                 if(narrativeTitle.length()>42)narrativeTitle=narrativeTitle.substring(0,39)+"...";
                 rect(17,y,725,55,panel2,6);
-                rect(25,y+11,31,38.75,i%2==0?0xff2263b5:0xff574184,18);
-                center(""+(i+1),40.5f,y+32,16.25,white,true);
+                rect(25,y+11,31,38.75f,i%2==0?0xff2263b5:0xff574184,18);
+                center(""+(i+1),40.5f,y+32,16.25f,white,true);
                 rect(63,y+10,49,33,0xff0b263b,5);
-                center(tf,87.5f,y+31,13.75,colors[Math.max(0,idx)],true);
+                center(tf,87.5f,y+31,13.75f,colors[Math.max(0,idx)],true);
                 text(narrativeTitle,122,y+16,13.13f,colors[Math.max(0,idx)],true);
                 drawWrapped(narrative,122,y+32,62,11.5f,white,12.6f,2);
                 text("High: "+fmt(rr==null?Double.NaN:rr.lastConfirmedHigh),646,y+20,10.63f,muted,false);
@@ -487,7 +487,7 @@ public class MainActivity extends Activity {
             text("DETAIL ANALISIS TIMEFRAME TERPILIH ("+selectedTf()+")",776,149,12.5f,cyan,true);
             text("Struktur",776,176,13.13f,muted,false);text(": "+(r==null?"DATA BELUM CUKUP":r.structure),856,176,13.13f,white,true);
             text("Kondisi",776,197,13.13f,muted,false);text(": "+(fresh&&live?"CANDLE SEGAR":"STALE / HISTORIS"),856,197,13.13f,fresh&&live?green:red,true);
-            text("Harga sekarang",776,218,13.13f,muted,false);text(": "+livePrice,856,218,13.75,live?green:red,true);
+            text("Harga sekarang",776,218,13.13f,muted,false);text(": "+livePrice,856,218,13.75f,live?green:red,true);
             text("Level terdekat",776,241,11,yellow,true);
             SwingAnalysisEngine.Zone ns=null,nd=null;double ds=Double.MAX_VALUE,dd=Double.MAX_VALUE;
             if(r!=null&&Double.isFinite(px)) for(SwingAnalysisEngine.Zone z:r.zones){
@@ -497,19 +497,19 @@ public class MainActivity extends Activity {
             text("● Supply: "+(ns==null?"belum terdeteksi":fmt(ns.low)+" – "+fmt(ns.high)),786,263,12.13f,0xffff6378,true);
             text("● Level kunci: "+(r==null?"—":fmt(r.lastConfirmedHigh)+" / "+fmt(r.lastConfirmedLow)),786,283,12.13f,yellow,true);
             text("● Demand: "+(nd==null?"belum terdeteksi":fmt(nd.low)+" – "+fmt(nd.high)),786,303,12.13f,green,true);
-            text("Interpretasi:",776,327,13.75,white,true);
+            text("Interpretasi:",776,327,13.75f,white,true);
             String interpretation;
             if(!live||!fresh) interpretation="Feed stale: level berikut adalah konteks candle tersimpan. Tidak bisa dipastikan harga sedang retest/menembus sekarang.";
             else interpretation=journeyFor(selectedTf(),px);
-            drawWrapped(interpretation,776,345,57,11.75f,white,13.2,5);
+            drawWrapped(interpretation,776,345,57,11.75f,white,13.2f,5);
             text("BAR TERAKHIR",776,414,9.5f,cyan,true);
-            if(bars!=null&&!bars.isEmpty()){SwingAnalysisEngine.Candle b=bars.get(bars.size()-1);text("O "+fmt(b.open)+"  H "+fmt(b.high)+"  L "+fmt(b.low)+"  C "+fmt(b.close),868,414,11.25,muted,false);}
+            if(bars!=null&&!bars.isEmpty()){SwingAnalysisEngine.Candle b=bars.get(bars.size()-1);text("O "+fmt(b.open)+"  H "+fmt(b.high)+"  L "+fmt(b.low)+"  C "+fmt(b.close),868,414,11.25f,muted,false);}
             text("ZONA SUPPLY & DEMAND "+selectedTf(),1232,149,15,cyan,true);
             if(r!=null){
                 int si=0,di=0;
                 for(SwingAnalysisEngine.Zone z:r.zones){
-                    if(z.supply&&si<2){float yy=166+si*49;rect(1230,yy,284,50,0xff301c2b,5);text("Supply "+(si+1),1240,yy+15,12.5,0xffff6378,true);text(fmt(z.low)+" – "+fmt(z.high),1240,yy+30,12.5,white,false);si++;}
-                    else if(!z.supply&&di<2){float yy=266+di*49;rect(1230,yy,284,50,0xff0c332b,5);text("Demand "+(di+1),1240,yy+15,12.5,green,true);text(fmt(z.low)+" – "+fmt(z.high),1240,yy+30,12.5,white,false);di++;}
+                    if(z.supply&&si<2){float yy=166+si*49;rect(1230,yy,284,50,0xff301c2b,5);text("Supply "+(si+1),1240,yy+15,12.5f,0xffff6378,true);text(fmt(z.low)+" – "+fmt(z.high),1240,yy+30,12.5f,white,false);si++;}
+                    else if(!z.supply&&di<2){float yy=266+di*49;rect(1230,yy,284,50,0xff0c332b,5);text("Demand "+(di+1),1240,yy+15,12.5f,green,true);text(fmt(z.low)+" – "+fmt(z.high),1240,yy+30,12.5f,white,false);di++;}
                 }
                 if(si==0)text("Supply: belum terdeteksi",1234,188,11.88f,muted,false);
                 if(di==0)text("Demand: belum terdeteksi",1234,288,11.88f,muted,false);
@@ -521,30 +521,30 @@ public class MainActivity extends Activity {
             String bull="1. Bertahan di atas level kunci. 2. Candle close menembus supply. 3. Retest dari atas berhasil. 4. Level target berikutnya mengikuti supply terdeteksi.";
             String bear="1. Gagal bertahan di level kunci. 2. Candle close menembus swing low. 3. Retest dari bawah gagal. 4. Pantau demand berikutnya.";
             if(!live||!fresh){bull="Feed STALE: skenario bullish belum aktif. Tunggu quote segar, candle close, dan retest terkonfirmasi.";bear="Feed STALE: skenario bearish belum aktif. Jangan anggap penembusan terjadi tanpa candle baru.";}
-            drawWrapped(bull,786,516,54,11.88f,white,14.4,6);drawWrapped(bear,1166,516,52,11.88f,white,14.4,6);
+            drawWrapped(bull,786,516,54,11.88f,white,14.4f,6);drawWrapped(bear,1166,516,52,11.88f,white,14.4f,6);
             text("⚠ CATATAN PENTING",776,644,12,yellow,true);
-            drawWrapped("Analisis berdasarkan candle tertutup. Sentuhan zona bukan bukti penolakan. Level dapat berubah saat data baru datang. Konfirmasi pergerakan berikutnya pada chart.",776,665,125,11.88f,white,14.4,3);
-            rect(1360,680,151,26,panel2,6);center("RINGKASAN →",1435,698,12.5,cyan,true);
+            drawWrapped("Analisis berdasarkan candle tertutup. Sentuhan zona bukan bukti penolakan. Level dapat berubah saat data baru datang. Konfirmasi pergerakan berikutnya pada chart.",776,665,125,11.88f,white,14.4f,3);
+            rect(1360,680,151,26,panel2,6);center("RINGKASAN →",1435,698,12.5f,cyan,true);
         }
         void drawDetail(){
             rect(8,127,745,604,panel,9);rect(763,127,765,604,panel,9);
             text("RINGKASAN MULTI-TIMEFRAME",22,153,16,cyan,true);
-            float row=181;for(int i=0;i<10;i++){SwingAnalysisEngine.Result r=analyses.get(frames[i]);boolean fresh=Boolean.TRUE.equals(freshness.get(frames[i]));text(frames[i],23,row+i*49,16.8,colors[i],true);text("Struktur: "+(r==null?"MENUNGGU":r.structure),83,row+i*49,15.6,white,true);text("Signal: "+(r==null?"WAIT":r.signal),315,row+i*49,15.6,yellow,true);text("High "+fmt(r==null?Double.NaN:r.lastConfirmedHigh)+" / Low "+fmt(r==null?Double.NaN:r.lastConfirmedLow),414,row+i*49,14.4,muted,false);text(fresh?"FRESH":"WAIT",675,row+i*49,13.2,fresh?green:red,true);line(20,row+10+i*49,740,row+10+i*49,grid,1);}
+            float row=181;for(int i=0;i<10;i++){SwingAnalysisEngine.Result r=analyses.get(frames[i]);boolean fresh=Boolean.TRUE.equals(freshness.get(frames[i]));text(frames[i],23,row+i*49,16.8f,colors[i],true);text("Struktur: "+(r==null?"MENUNGGU":r.structure),83,row+i*49,15.6f,white,true);text("Signal: "+(r==null?"WAIT":r.signal),315,row+i*49,15.6f,yellow,true);text("High "+fmt(r==null?Double.NaN:r.lastConfirmedHigh)+" / Low "+fmt(r==null?Double.NaN:r.lastConfirmedLow),414,row+i*49,14.4f,muted,false);text(fresh?"FRESH":"WAIT",675,row+i*49,13.2f,fresh?green:red,true);line(20,row+10+i*49,740,row+10+i*49,grid,1);}
             text("PENJELASAN ANALISIS",779,153,16,cyan,true);
-            SwingAnalysisEngine.Result r=analyses.get(selectedTf());text("Timeframe terpilih: "+selectedTf(),781,184,16.8,white,true);
-            text("Struktur: "+(r==null?"MENUNGGU":r.structure),781,210,16.8,white,true);
-            text("Status data: "+(Boolean.TRUE.equals(freshness.get(selectedTf()))?"FRESH":"STALE / DATA BELUM TERSEDIA"),781,236,15.6,Boolean.TRUE.equals(freshness.get(selectedTf()))?green:red,true);
-            text("Kesimpulan: "+(r==null?"Belum ada data valid.":r.reason),781,270,14.4,muted,false);
+            SwingAnalysisEngine.Result r=analyses.get(selectedTf());text("Timeframe terpilih: "+selectedTf(),781,184,16.8f,white,true);
+            text("Struktur: "+(r==null?"MENUNGGU":r.structure),781,210,16.8f,white,true);
+            text("Status data: "+(Boolean.TRUE.equals(freshness.get(selectedTf()))?"FRESH":"STALE / DATA BELUM TERSEDIA"),781,236,15.6f,Boolean.TRUE.equals(freshness.get(selectedTf()))?green:red,true);
+            text("Kesimpulan: "+(r==null?"Belum ada data valid.":r.reason),781,270,14.4f,muted,false);
             text("ATURAN PEMBACAAN",781,312,14,yellow,true);
-            text("1. Swing hanya dikonfirmasi setelah dua candle di kanan tertutup.",781,339,14.4,white,false);
-            text("2. Supply/Demand adalah kandidat dari displacement, bukan order institusi pasti.",781,363,14.4,white,false);
-            text("3. Breakout perlu candle close melewati swing/level.",781,387,14.4,white,false);
-            text("4. Retest perlu reaksi baru; tidak diasumsikan terjadi otomatis.",781,411,14.4,white,false);
-            text("5. Jika feed stale, candle tidak cukup, atau arah ambigu: WAIT.",781,435,14.4,white,false);
-            text("6. Aplikasi hanya membaca data; tidak mengirim order ke broker.",781,459,14.4,green,true);
+            text("1. Swing hanya dikonfirmasi setelah dua candle di kanan tertutup.",781,339,14.4f,white,false);
+            text("2. Supply/Demand adalah kandidat dari displacement, bukan order institusi pasti.",781,363,14.4f,white,false);
+            text("3. Breakout perlu candle close melewati swing/level.",781,387,14.4f,white,false);
+            text("4. Retest perlu reaksi baru; tidak diasumsikan terjadi otomatis.",781,411,14.4f,white,false);
+            text("5. Jika feed stale, candle tidak cukup, atau arah ambigu: WAIT.",781,435,14.4f,white,false);
+            text("6. Aplikasi hanya membaca data; tidak mengirim order ke broker.",781,459,14.4f,green,true);
             text("RIWAYAT BAR TERAKHIR",781,499,14,cyan,true);
-            List<SwingAnalysisEngine.Candle> bars=data.get(selectedTf());if(bars!=null){for(int i=0;i<Math.min(6,bars.size());i++){SwingAnalysisEngine.Candle b=bars.get(bars.size()-1-i);text(new SimpleDateFormat("MM-dd HH:mm",Locale.US).format(new Date(b.time)),781,526+i*27,13.2,muted,false);text("O "+fmt(b.open)+" H "+fmt(b.high)+" L "+fmt(b.low)+" C "+fmt(b.close),900,526+i*27,13.2,white,false);}}
-            rect(1427,690,84,31,panel2,7);center("← CHART",1469,710,13.2,cyan,true);
+            List<SwingAnalysisEngine.Candle> bars=data.get(selectedTf());if(bars!=null){for(int i=0;i<Math.min(6,bars.size());i++){SwingAnalysisEngine.Candle b=bars.get(bars.size()-1-i);text(new SimpleDateFormat("MM-dd HH:mm",Locale.US).format(new Date(b.time)),781,526+i*27,13.2f,muted,false);text("O "+fmt(b.open)+" H "+fmt(b.high)+" L "+fmt(b.low)+" C "+fmt(b.close),900,526+i*27,13.2f,white,false);}}
+            rect(1427,690,84,31,panel2,7);center("← CHART",1469,710,13.2f,cyan,true);
         }
         @Override public boolean onTouchEvent(android.view.MotionEvent e){if(e.getAction()==MotionEvent.ACTION_UP){float x=(e.getX()-offX)/sx,y=(e.getY()-offY)/sy;if(H>W){if(y>=105&&y<191){int col=Math.max(0,Math.min(4,(int)((x-12)/150)));int row=y<145?0:1;selected=Math.max(0,Math.min(9,row*5+col));}else if(y>=1410){pageIndex=(pageIndex+1)%3;}else if(y<100&&x>500){pageIndex=(pageIndex+1)%3;}}else{if(y>=82&&y<120&&x<790){selected=Math.max(0,Math.min(9,(int)(x/77.2f)));}else if(y>670&&x>1300){pageIndex=(pageIndex+1)%3;}else if(y<75&&x>1400){pageIndex=(pageIndex+1)%3;}}invalidate();return true;}return true;}
     }
