@@ -283,7 +283,7 @@ public class MainActivity extends Activity {
             }
             if(!(hi>lo))hi=lo+1;
             // Reserve a dedicated label rail. Candles and zones never extend beneath it.
-            float railW=218f;
+            float railW=250f;
             // Reserve genuine empty space AFTER the newest candle, inside the chart plot,
             // while keeping the price/zone-label rail completely separate on the right.
             float rightPad=34f;
@@ -374,21 +374,21 @@ public class MainActivity extends Activity {
             // the chart card or underneath candle bodies.
             for(int i=0;i<=6;i++){
                 float yy=y+i*h/6;
-                text(fmt(hi-i*(hi-lo)/6),railX+6,yy+4,11.88f,muted,false);
+                text(fmt(hi-i*(hi-lo)/6),railX+8,yy+5,14.25f,muted,false);
             }
-            int slots=Math.max(1,(int)(h/22f));
+            int slots=Math.max(1,(int)(h/25f));
             int drawn=Math.min(order.size(),slots);
             for(int j=0;j<drawn;j++){
                 int idx=order.get(j);
                 float target=zonePriceY.get(idx);
                 float labelY=y+10+j*((h-20f)/Math.max(1,drawn-1));
                 String tag=zoneLabels.get(idx);
-                p.setTextSize(10.6f);p.setTypeface(Typeface.DEFAULT_BOLD);
+                p.setTextSize(12.2f);p.setTypeface(Typeface.DEFAULT_BOLD);
                 float tagW=Math.min(railW-8,p.measureText(tag)+8);
                 float labelX=x+w-tagW-3;
-                fill(0xf003101e);c.drawRoundRect(labelX,labelY-10,x+w-3,labelY+3,3,3,p);
-                p.setColor(zoneTypes.get(idx));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1f);c.drawRoundRect(labelX,labelY-10,x+w-3,labelY+3,3,3,p);p.setStyle(Paint.Style.FILL);
-                text(tag,labelX+4,labelY,8.5f,zoneLabelColors.get(idx),true);
+                fill(0xf003101e);c.drawRoundRect(labelX,labelY-13,x+w-3,labelY+4,4,4,p);
+                p.setColor(zoneTypes.get(idx));p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(1f);c.drawRoundRect(labelX,labelY-13,x+w-3,labelY+4,4,4,p);p.setStyle(Paint.Style.FILL);
+                text(tag,labelX+5,labelY+1,10.5f,zoneLabelColors.get(idx),true);
                 // Connector visually ties the colored zone midpoint to its right-side label.
                 line(x+candlePlotW,target,labelX,labelY-3,zoneTypes.get(idx),1.4f);
                 fill(zoneLabelColors.get(idx));
@@ -404,9 +404,9 @@ public class MainActivity extends Activity {
                 c.drawLine(x,liveY,x+candlePlotW,liveY,p);
                 p.setPathEffect(null);p.setStyle(Paint.Style.FILL);
                 String liveLabel=fmt(current);
-                float tagW=58f,tagH=20f,tagX=x+w-tagW-2f;
+                float tagW=72f,tagH=24f,tagX=x+w-tagW-2f;
                 fill(0xfff4f7fb);c.drawRoundRect(tagX,liveY-tagH/2,tagX+tagW,liveY+tagH/2,4,4,p);
-                text(liveLabel,tagX+5,liveY+4,13.75f,0xff061322,true);
+                text(liveLabel,tagX+6,liveY+5,15.5f,0xff061322,true);
             }
 
             // Confirmed swing markers remain on top of candles.
