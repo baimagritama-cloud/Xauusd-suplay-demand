@@ -383,8 +383,8 @@ public class MainActivity extends Activity {
             // Header and timeframe selector are shared with the other pages. This page follows
             // the supplied mockup: journey at left; selected-TF interpretation and zones right.
             rect(8,127,862,604,panel,9);
-            rect(879,127,520,360,panel,9);
-            rect(1408,127,120,360,panel,9);
+            rect(879,127,400,360,panel,9);
+            rect(1287,127,479,360,panel,9);
             rect(879,495,887,198,panel,9);
             rect(879,701,887,30,panel,6);
             text("HALAMAN 2 — PERJALANAN HARGA XAUUSD",22,153,17,cyan,true);
@@ -439,23 +439,23 @@ public class MainActivity extends Activity {
                 SwingAnalysisEngine.Candle b=selectedBars.get(selectedBars.size()-1);
                 drawWrapped("O "+fmt(b.open)+"  H "+fmt(b.high)+"  L "+fmt(b.low)+"  C "+fmt(b.close),893,450,70,10,muted,12,2);
             }else text("OHLC belum tersedia",893,451,10,muted,false);
-            text("ZONA S/D",1420,153,13,cyan,true);
+            text("ZONA SUPPLY & DEMAND",1301,153,13,cyan,true);
             if(selectedResult!=null){
                 int supplyCount=0,demandCount=0;
                 for(SwingAnalysisEngine.Zone z:selectedResult.zones){
                     if(supplyCount+demandCount>=5) break;
                     if(z.supply&&supplyCount<2){
                         float yy=176+supplyCount*52;
-                        rect(1417,yy,102,42,0xff301c2b,5);text("SUPPLY "+(supplyCount+1),1425,yy+16,9.5f,0xffff6479,true);
-                        text(fmt(z.low)+"–"+fmt(z.high),1425,yy+31,8.5f,white,false);supplyCount++;
+                        rect(1300,yy,451,42,0xff301c2b,5);text("SUPPLY "+(supplyCount+1),1310,yy+16,10,0xffff6479,true);
+                        text(fmt(z.low)+" – "+fmt(z.high),1450,yy+26,10,white,false);supplyCount++;
                     }else if(!z.supply&&demandCount<2){
                         float yy=286+demandCount*52;
-                        rect(1417,yy,102,42,0xff0c332b,5);text("DEMAND "+(demandCount+1),1425,yy+16,9.5f,0xff25df88,true);
-                        text(fmt(z.low)+"–"+fmt(z.high),1425,yy+31,8.5f,white,false);demandCount++;
+                        rect(1300,yy,451,42,0xff0c332b,5);text("DEMAND "+(demandCount+1),1310,yy+16,10,0xff25df88,true);
+                        text(fmt(z.low)+" – "+fmt(z.high),1450,yy+26,10,white,false);demandCount++;
                     }
                 }
-                if(supplyCount==0) text("Supply: —",1420,190,9.5f,muted,false);
-                if(demandCount==0) text("Demand: —",1420,300,9.5f,muted,false);
+                if(supplyCount==0) text("Supply: —",1305,190,10,muted,false);
+                if(demandCount==0) text("Demand: —",1305,300,10,muted,false);
             }else{text("Supply: —",1420,190,9.5f,muted,false);text("Demand: —",1420,300,9.5f,muted,false);}
             text("SKENARIO PERGERAKAN HARGA",893,519,14,cyan,true);
             rect(892,531,426,148,0xff061f1c,6);
