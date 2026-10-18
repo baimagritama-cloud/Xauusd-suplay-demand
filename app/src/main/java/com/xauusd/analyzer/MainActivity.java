@@ -52,12 +52,12 @@ public class MainActivity extends Activity {
     private class Dashboard extends View {
         Canvas c; Paint p=new Paint(3); float sx,sy,W,H,offX,offY;
         final int bg=0xff020713,panel=0xff031326,panel2=0xff061a30,grid=0xff17445e,white=0xfff2fbff,muted=0xff9bb9d4,cyan=0xff00f5ff,red=0xffff1744,blue=0xff2979ff,green=0xff00ff85,yellow=0xffffff00;
-        Dashboard(){super(MainActivity.this);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
+        Dashboard(){super(MainActivity.this);setLayerType(View.LAYER_TYPE_HARDWARE,null);setFocusable(true);}
         void fill(int color){p.setColor(color);p.setStyle(Paint.Style.FILL);p.setStrokeWidth(1);}
         void rect(float x,float y,float w,float h,int color,float radius){fill(color);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.STROKE);p.setColor(0xff087da8);p.setStrokeWidth(1.15f);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.FILL);}
         void line(float x,float y,float x2,float y2,int color,float width){p.setColor(color);p.setStrokeWidth(width);p.setStyle(Paint.Style.STROKE);c.drawLine(x,y,x2,y2,p);p.setStyle(Paint.Style.FILL);}
-        void text(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.DEFAULT_BOLD:Typeface.DEFAULT);c.drawText(s,x,y,p);}
-        void center(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.DEFAULT_BOLD:Typeface.DEFAULT);c.drawText(s,x-p.measureText(s)/2,y,p);}
+        void text(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.create("sans-serif",Typeface.BOLD):Typeface.create("sans-serif",Typeface.NORMAL));p.setSubpixelText(true);p.setAntiAlias(true);p.setFilterBitmap(false);c.drawText(s,x,y,p);}
+        void center(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.create("sans-serif",Typeface.BOLD):Typeface.create("sans-serif",Typeface.NORMAL));p.setSubpixelText(true);p.setAntiAlias(true);c.drawText(s,x-p.measureText(s)/2,y,p);}
         @Override protected void onDraw(Canvas canvas){
             super.onDraw(canvas);c=canvas;W=getWidth();H=getHeight();c.save();
             fill(bg);c.drawRect(0,0,W,H,p);
@@ -67,7 +67,7 @@ public class MainActivity extends Activity {
                 sx=sy=Math.min(W/768f,H/1536f);offX=(W-768f*sx)/2f;offY=(H-1536f*sy)/2f;
                 c.translate(offX,offY);c.scale(sx,sy);drawPortrait();
             }else{
-                sx=sy=Math.min(W/1536f,H/768f);offX=(W-1536f*sx)/2f;offY=(H-768f*sy)/2f;
+                sx=sy=Math.max(0.72f,Math.min(W/1536f,H/768f));offX=(W-1536f*sx)/2f;offY=(H-768f*sy)/2f;
                 c.translate(offX,offY);c.scale(sx,sy);fill(bg);c.drawRect(0,0,1536,768,p);header();
                 for(int i=0;i<10;i++){float x=8+i*77.2f;rect(x,82,72,36,i==selected?colors[i]:panel2,7);center(frames[i],x+36,105,14,i==selected?bg:colors[i],true);}
                 if(pageIndex==0)drawChart();else if(pageIndex==1)drawExplanation();else drawDetail();
