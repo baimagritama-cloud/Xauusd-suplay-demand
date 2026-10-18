@@ -2,10 +2,24 @@ package com.xauusd.analyzer;
 import android.app.*;import android.os.*;import android.graphics.*;import android.view.*;
 public class MainActivity extends Activity {
  public static volatile String livePrice="Menghubungkan...", liveSpread="--", liveTime="Menunggu tick", liveState="CONNECTING";
- private BiquoteStream stream;
- public void onCreate(Bundle b){super.onCreate(b);getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);dashboard=new Dashboard();setContentView(dashboard);stream=new BiquoteStream(new BiquoteStream.Listener(){public void onTick(String price,String spread,String time,String state){livePrice=price;liveSpread=spread;liveTime=time;liveState=state;runOnUiThread(()->{if(dashboard!=null)dashboard.invalidate();});}public void onStatus(String state){liveState=state;runOnUiThread(()->{if(dashboard!=null)dashboard.invalidate();});}});stream.connect();}
+ private BiquoteStream stream; private BiquoteCandleRepository candles; public static volatile String engineStatus="Mesin analisis menunggu candle OHLC"; public static volatile String h1Structure="WAIT";
+ public void onCreate(Bundle b){super.onCreate(b);getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);dashboard=new Dashboard();setContentView(dashboard);stream=new BiquoteStream(new BiquoteStream.Listener(){public void onTick(String price,String spread,String time,String state){livePrice=price;liveSpread=spread;liveTime=time;liveState=state;runOnUiThread(()->{if(dashboard!=null)dashboard.invalidate();});}public void onStatus(String state){liveState=state;runOnUiThread(()->{if(dashboard!=null)dashboard.invalidate();});}});stream.connect();candles=new BiquoteCandleRepository();loadAnalysisCandles();}
  private Dashboard dashboard;
- @Override protected void onDestroy(){if(stream!=null)stream.close();super.onDestroy();}
+ private void loadAnalysisCandles(){
+  if(candles==null)return;
+  final String[] frames={"M1","M5","M15","M30","H1","H4","D1"};
+  for(String frame:frames) candles.load(frame,(tf,bars,fresh,message)->{
+   if("H1".equals(tf)){
+    SwingAnalysisEngine.Result result=SwingAnalysisEngine.analyze(bars,parsePrice(livePrice),fresh);
+    h1Structure=result.structure+" / "+result.signal;
+    engineStatus=message+" • "+result.reason;
+    runOnUiThread(()->{if(dashboard!=null)dashboard.invalidate();});
+   }
+  });
+  new Handler().postDelayed(()->{if(!isFinishing())loadAnalysisCandles();},60000);
+ }
+ private double parsePrice(String s){try{return Double.parseDouble(s);}catch(Exception e){return Double.NaN;}}
+ @Override protected void onDestroy(){if(stream!=null)stream.close();if(candles!=null)candles.close();super.onDestroy();}
  class Dashboard extends View {
   Canvas c; Paint p=new Paint(3); int page=0,tf=2; float sx,sy,W,H;
   int bg=Color.rgb(3,12,25),panel=Color.rgb(5,21,38),panel2=Color.rgb(8,28,48),grid=Color.rgb(24,56,78),white=Color.rgb(228,239,249),muted=Color.rgb(142,166,192),cyan=Color.rgb(34,211,230),red=Color.rgb(255,73,98),blue=Color.rgb(43,137,255),green=Color.rgb(20,224,151),yellow=Color.rgb(255,211,31),orange=Color.rgb(255,142,22),purple=Color.rgb(194,63,255),pink=Color.rgb(255,77,187);
@@ -20,7 +34,7 @@ public class MainActivity extends Activity {
   void header(boolean second){rect(8,7,775,69,panel,10);text("◆",22,52,43,0xffffc629,true);text("XAUUSD Analyzer",88,35,27,white,true);text(second?"Detail Analisis • Perjalanan Market • Prediksi Level":"Multi-Timeframe • Level • Supply & Demand • Structure",89,58,13,muted,false);rect(467,10,112,58,panel2,8);text("Harga Sekarang",480,26,12,white,false);text(livePrice,480,52,24,green,true);rect(584,10,64,58,panel2,8);text("Spread",597,26,12,white,false);text(liveSpread,597,51,20,white,true);rect(654,10,132,58,panel2,8);text("Waktu Server",665,26,12,white,false);text(liveState,665,43,11,white,true);text(liveTime,665,58,10,white,false);}
   void drawOne(){header(false);for(int i=0;i<10;i++){float x=8+i*77.2f;rect(x,85,72,37,colors[i],7);center(tfs[i],x+36,109,15,0xff061423,true);}
    // Main chart
-   rect(8,130,778,642,panel,10);text("XAUUSD • H1",20,153,16,white,true);text("O 2742.18   H 2743.50   L 2741.86   C 2743.21   +1.03 (+0.04%)",164,153,13,green,false);
+   rect(8,130,778,642,panel,10);text("XAUUSD • H1 • "+h1Structure,20,153,16,white,true);text("O 2742.18   H 2743.50   L 2741.86   C 2743.21   +1.03 (+0.04%)",164,153,13,green,false);
    float top=170,bottom=740,left=28,right=724; for(int i=0;i<8;i++){float y=top+i*(bottom-top)/7;line(left,y,right,y,grid,1);text(String.format(java.util.Locale.US,"%.2f",2772-i*6.5),729,y+4,11,muted,false);}for(int i=0;i<6;i++){float x=left+i*(right-left)/5;line(x,top,x,bottom,grid,1);text(new String[]{"19 Oct 22:00","20 Oct 02:00","20 Oct 06:00","20 Oct 10:00","20 Oct 14:00",""}[i],x-22,762,10,muted,false);}
    // TF levels + zones
    float[] ys={720,651,596,539,465,412,360,303,246,192};
@@ -50,7 +64,7 @@ public class MainActivity extends Activity {
    text("4. KONFIRMASI / PEMBATAL",816,706,12,red,true);
    text("Jangan simpulkan reversal hanya dari sentuhan zona. Perlu candle close, swing terkonfirmasi,",816,725,11,white,false);
    text("dan retest yang valid. HH baru H4 atau close H1 di atas 2747.60 membatalkan bias penolakan.",816,742,11,white,false);
-   text("CATATAN: level dan narasi ini masih data contoh/mock, bukan feed XAUUSD real-time.",816,758,10,muted,false);
+   text(engineStatus.length()>95?engineStatus.substring(0,95):engineStatus,816,758,10,muted,false);
   }
   void zone(float x,float y,float w,float h,int col,String label){int alpha=col;fill(col);p.setAlpha(65);c.drawRect(x,y,x+w,y+h,p);p.setAlpha(255);p.setStyle(Paint.Style.STROKE);p.setColor(col);p.setStrokeWidth(1.5f);c.drawRect(x,y,x+w,y+h,p);p.setStyle(Paint.Style.FILL);center(label,x+w/2,y+h/2+5,12,white,true);}
   void drawTwo(){header(true);rect(8,80,778,43,panel,9);rect(15,84,160,35,page==0?cyan:panel2,7);center("1  Chart",95,107,15,white,true);rect(177,84,250,35,blue,7);center("2  Keterangan Detail",302,107,15,white,true);rect(800,80,728,43,panel,9);text("Harga Sekarang   "+livePrice+"   "+liveState,815,106,15,green,true);
