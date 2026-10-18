@@ -22,6 +22,18 @@ public final class BiquoteCandleRepository {
     private final Set<Call> calls = Collections.synchronizedSet(new HashSet<Call>());
 
     public void load(String timeframe, Callback callback) {
+        if ("H8".equals(timeframe) || "H12".equals(timeframe) || "W1".equals(timeframe)) {
+            final String base = "W1".equals(timeframe) ? "D1" : "H4";
+            final int factor = "H8".equals(timeframe) ? 2 : ("H12".equals(timeframe) ? 3 : 5);
+            load(base, (ignored, source, fresh, message) -> {
+                ArrayList<SwingAnalysisEngine.Candle> aggregated = aggregate(source, factor);
+                boolean ok = fresh && aggregated.size() >= 12;
+                callback.onCandles(timeframe, aggregated, ok,
+                        ok ? "OHLC " + timeframe + " diagregasi dari candle tertutup " + base
+                           : "Data dasar " + base + " belum cukup/segar untuk " + timeframe);
+            });
+            return;
+        }
         final String interval = intervalFor(timeframe);
         if (interval == null) {
             callback.onCandles(timeframe, Collections.<SwingAnalysisEngine.Candle>emptyList(), false,
@@ -93,6 +105,24 @@ public final class BiquoteCandleRepository {
             }
         }
     }
+    private static ArrayList<SwingAnalysisEngine.Candle> aggregate(List<SwingAnalysisEngine.Candle> source, int factor) {
+        ArrayList<SwingAnalysisEngine.Candle> out = new ArrayList<>();
+        if (source == null || factor < 2) return out;
+        int usable = source.size() - (source.size() % factor);
+        for (int i = 0; i < usable; i += factor) {
+            SwingAnalysisEngine.Candle first = source.get(i);
+            double high = first.high, low = first.low;
+            for (int j = i + 1; j < i + factor; j++) {
+                SwingAnalysisEngine.Candle item = source.get(j);
+                high = Math.max(high, item.high);
+                low = Math.min(low, item.low);
+            }
+            SwingAnalysisEngine.Candle last = source.get(i + factor - 1);
+            out.add(new SwingAnalysisEngine.Candle(first.time, first.open, high, low, last.close));
+        }
+        return out;
+    }
+
     private static long freshnessLimit(String tf) {
         if ("M1".equals(tf)) return 3*60_000L;
         if ("M5".equals(tf)) return 12*60_000L;
@@ -100,7 +130,10 @@ public final class BiquoteCandleRepository {
         if ("M30".equals(tf)) return 70*60_000L;
         if ("H1".equals(tf)) return 130*60_000L;
         if ("H4".equals(tf)) return 9*60*60_000L;
-        return 36*60*60_000L;
+        if ("H8".equals(tf)) return 18*60*60_000L;
+        if ("H12".equals(tf)) return 27*60*60_000L;
+        if ("D1".equals(tf)) return 36*60*60_000L;
+        return 8*24*60*60_000L;
     }
     private static String intervalFor(String tf) {
         switch(tf) {
