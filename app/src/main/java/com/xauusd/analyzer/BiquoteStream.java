@@ -21,7 +21,7 @@ public final class BiquoteStream {
   Request req=new Request.Builder().url("wss://biquote.io/hubs/tick").build();
   socket=http.newWebSocket(req,new WebSocketListener(){
    @Override public void onOpen(WebSocket ws,Response response){
-    attempts=0;listener.onStatus("LIVE");
+    attempts=0;listener.onStatus("CONNECTED — menunggu tick");
     ws.send("{\"protocol\":\"json\",\"version\":1}\u001e");
     ws.send("{\"type\":1,\"invocationId\":\"1\",\"target\":\"Subscribe\",\"arguments\":[[\"XAUUSD\"]]}\u001e");
    }
@@ -39,7 +39,9 @@ public final class BiquoteStream {
       if(Double.isNaN(mid))continue;
       double spr=tick.optDouble("spread",(!Double.isNaN(ask)&&!Double.isNaN(bid))?ask-bid:Double.NaN);
       String state=tick.optString("marketState","LIVE");
-      if(tick.optBoolean("stale",false))state="STALE";
+      if(tick.optBoolean("stale",false) || tick.optLong("quoteAgeSeconds",0)>300)state="STALE";
+      if("open".equalsIgnoreCase(state)) state="LIVE";
+      if("closed".equalsIgnoreCase(state)) state="MARKET CLOSED";
       String timestamp=tick.optString("timestamp","");
       if(timestamp.length()>=19)timestamp=timestamp.substring(11,19);
       else if(timestamp.isEmpty())timestamp=java.text.DateFormat.getTimeInstance().format(new java.util.Date());
