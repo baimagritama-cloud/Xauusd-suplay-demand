@@ -81,13 +81,68 @@ public class MainActivity extends Activity {
                 int shown=0;for(int i=result.zones.size()-1;i>=0&&shown<5;i--){SwingAnalysisEngine.Zone z=result.zones.get(i);int col=z.supply?red:blue;text((z.supply?"SUPPLY ":"DEMAND ")+fmt(z.low)+" - "+fmt(z.high),1014,384+shown*25,12,col,true);shown++;}
             }else text("Belum ada zona valid terdeteksi.",1014,384,12,muted,false);
             line(1014,525,1510,525,grid,1);
-            text("KONFIRMASI",1014,549,13,yellow,true);
-            text("• Gunakan candle close, bukan sentuhan zona.",1014,574,12,white,false);
-            text("• Tunggu retest sebelum menganggap breakout valid.",1014,596,12,white,false);
-            text("• WAIT jika feed stale atau struktur belum jelas.",1014,618,12,white,false);
-            text("• Tidak ada probabilitas buatan atau harga target statis.",1014,640,12,white,false);
-            text("Ketuk halaman kanan bawah untuk detail.",1014,682,12,cyan,true);
+            drawPriceJourney(result);
+            text("Ketuk DETAIL untuk riwayat dan konteks multi-timeframe.",1014,682,11,cyan,true);
             rect(1439,690,72,31,panel2,7);center("DETAIL →",1475,710,11,cyan,true);
+        }
+        void drawPriceJourney(SwingAnalysisEngine.Result selectedResult){
+            text("PERJALANAN HARGA LIVE",1014,549,13,yellow,true);
+            double px=price();
+            boolean fresh=Boolean.TRUE.equals(freshness.get(selectedTf())) && "LIVE".equals(liveState);
+            if(!Double.isFinite(px)){
+                text("• Menunggu harga dari feed Biquote.",1014,573,11,white,false);
+                text("• Arah perjalanan belum dapat dinilai.",1014,591,11,muted,false);
+                text("• Sinyal tetap WAIT sampai quote tersedia.",1014,609,11,red,true);
+                return;
+            }
+            if(!fresh){
+                text("Harga referensi "+fmt(px)+"; feed "+liveState+".",1014,572,11,red,true);
+                text("Struktur/zona historis tetap terlihat, tetapi",1014,590,11,white,false);
+                text("ini bukan pembacaan perjalanan live saat ini.",1014,608,11,white,false);
+                text("Probabilitas dinonaktifkan; sinyal tetap WAIT.",1014,626,11,yellow,true);
+                text("Saat feed LIVE, panel ini membaca sentuhan,",1014,644,11,muted,false);
+                text("reaksi candle, retest, dan zona TF berikutnya.",1014,662,11,muted,false);
+                return;
+            }
+            SwingAnalysisEngine.Zone touched=null; String touchedTf="";
+            double nearest=Double.MAX_VALUE;
+            for(int tf=0;tf<frames.length;tf++){
+                SwingAnalysisEngine.Result ar=analyses.get(frames[tf]); if(ar==null)continue;
+                for(SwingAnalysisEngine.Zone z:ar.zones){
+                    double d=px<z.low?z.low-px:(px>z.high?px-z.high:0);
+                    if(d==0){touched=z;touchedTf=frames[tf];nearest=0;break;}
+                    if(d<nearest){nearest=d;touched=z;touchedTf=frames[tf];}
+                }
+                if(nearest==0)break;
+            }
+            List<SwingAnalysisEngine.Candle> selectedBars=data.get(selectedTf());
+            SwingAnalysisEngine.Candle last=(selectedBars==null||selectedBars.isEmpty())?null:selectedBars.get(selectedBars.size()-1);
+            boolean bearishReaction=last!=null&&last.close<last.open;
+            boolean bullishReaction=last!=null&&last.close>last.open;
+            String zoneName=touched==null?"zona terdekat":(touched.supply?"SUPPLY ":"DEMAND ")+touchedTf;
+            String relation=touched==null?"belum ada zona kandidat":(nearest==0?"harga sedang berada di zona ":"zona terdekat ")+zoneName;
+            text("Harga "+fmt(px)+" • "+relation,1014,572,11,white,true);
+            if(touched!=null&&nearest==0){
+                int score=55;
+                boolean reaction=touched.supply?bearishReaction:bullishReaction;
+                if(reaction)score+=10;
+                if(selectedResult!=null&&((touched.supply&&selectedResult.structure.contains("LH"))||(!touched.supply&&selectedResult.structure.contains("HL"))))score+=5;
+                score=Math.min(70,score);
+                String direction=touched.supply?"penolakan turun":"pantulan naik";
+                text("Skenario utama: "+direction+" dari zona kandidat.",1014,591,11,touched.supply?red:green,true);
+                text("Skor indikatif awal: "+score+"% (heuristik, bukan statistik)",1014,610,10.5f,yellow,true);
+                text("Reaksi candle terakhir: "+(reaction?(touched.supply?"bearish":"bullish"):"belum searah"),1014,628,10.5f,white,false);
+                text("Validasi: tunggu candle close menjauh dari zona.",1014,646,10.5f,white,false);
+                text("Jika close menembus zona, skenario ditinjau ulang.",1014,664,10.5f,muted,false);
+            }else{
+                String bias=selectedResult==null?"belum terbaca":selectedResult.structure;
+                text("Struktur "+selectedTf()+": "+bias+".",1014,591,11,white,false);
+                text("Harga belum menyentuh zona kandidat; jangan",1014,610,11,white,false);
+                text("menganggap retest atau penolakan sudah terjadi.",1014,628,11,white,false);
+                text("Pantau candle close menuju "+zoneName+".",1014,646,11,white,false);
+                text("Persentase skenario belum ditampilkan sebelum",1014,664,11,yellow,true);
+                text("ada sentuhan zona dan reaksi candle teramati.",1014,678,10,muted,false);
+            }
         }
         String selectedTf(){return frames[selected];}
         String fmt(double v){return Double.isFinite(v)?String.format(Locale.US,"%.2f",v):"--";}
