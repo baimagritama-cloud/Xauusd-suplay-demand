@@ -229,7 +229,7 @@ public class MainActivity extends Activity {
             for(int i=0;i<=6;i++){float yy=y+i*h/6;line(x,yy,x+w,yy,grid,1);text(fmt(hi-i*(hi-lo)/6),x+w+3,yy+4,10,muted,false);}
             int n=bars.size()-start;float cw=w/n;
             for(int i=0;i<n;i++){SwingAnalysisEngine.Candle b=bars.get(start+i);float xx=x+i*cw+cw/2;float yh=y+(float)((hi-b.high)/(hi-lo))*h;float yl=y+(float)((hi-b.low)/(hi-lo))*h;float yo=y+(float)((hi-b.open)/(hi-lo))*h;float yc=y+(float)((hi-b.close)/(hi-lo))*h;int col=b.close>=b.open?green:red;line(xx,yh,xx,yl,col,1.5f);fill(col);float bw=Math.max(2,cw*.62f);c.drawRect(xx-bw/2,Math.min(yo,yc),xx+bw/2,Math.max(Math.min(yo,yc)+2,Math.max(yo,yc)),p);}
-            double current=price();if(Double.isFinite(current)&&current>=lo&&current<=hi){float yy=y+(float)((hi-current)/(hi-lo))*h;line(x,yy,x+w,yy,yellow,1.5f);text("Harga "+fmt(current),x+8,yy-5,11,yellow,true);}
+            double current=price();
             // Multi-timeframe zones: draw subtle fill across the chart, then place readable
             // compact labels in a dedicated right-side label rail. Avoid stacking all labels at
             // the same price by assigning each label a separated row while preserving price in text.
@@ -279,6 +279,19 @@ public class MainActivity extends Activity {
                 text(tag,labelX+4,labelY,8.5f,zoneLabelColors.get(idx),true);
                 // Connector is confined to the label rail, never drawn across candles.
                 line(railX,target,railX+5,labelY-3,zoneTypes.get(idx),0.8f);
+            }
+            // Live-price movement is distinct from timeframe levels: white dashed line,
+            // with a white price tag in the right-side rail so it never hides candles.
+            if(Double.isFinite(current)&&current>=lo&&current<=hi){
+                float liveY=y+(float)((hi-current)/(hi-lo))*h;
+                p.setColor(white);p.setStrokeWidth(1.6f);p.setStyle(Paint.Style.STROKE);
+                p.setPathEffect(new DashPathEffect(new float[]{7f,4f},0));
+                c.drawLine(x,liveY,x+w,liveY,p);
+                p.setPathEffect(null);p.setStyle(Paint.Style.FILL);
+                String liveLabel=fmt(current);
+                float tagW=58f, tagH=20f, tagX=x+w-tagW-2f;
+                fill(0xfff4f7fb);c.drawRoundRect(tagX,liveY-tagH/2,tagX+tagW,liveY+tagH/2,4,4,p);
+                text(liveLabel,tagX+5,liveY+4,11,0xff061322,true);
             }
             // Confirmed swing points belong to the selected chart timeframe.
             SwingAnalysisEngine.Result r=analyses.get(selectedTf());if(r!=null){for(SwingAnalysisEngine.Swing s:r.swings){if(s.index<start||s.index>=bars.size())continue;float xx=x+(s.index-start+.5f)*cw;float yy=y+(float)((hi-s.price)/(hi-lo))*h;center(s.high?"H":"L",xx,yy+(s.high?-5:13),9,s.high?red:green,true);}}
