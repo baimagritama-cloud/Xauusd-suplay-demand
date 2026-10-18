@@ -41,7 +41,7 @@ public final class BiquoteCandleRepository {
             return;
         }
         Request request = new Request.Builder()
-                .url("https://biquote.io/api/XAUUSD/ohlc?interval=" + interval + "&limit=300")
+                .url("https://biquote.io/api/XAUUSD/ohlc?interval=" + interval + "&limit=1000")
                 .header("Accept", "application/json").build();
         Call call = client.newCall(request);
         calls.add(call);
@@ -96,6 +96,11 @@ public final class BiquoteCandleRepository {
                         return Long.compare(a.time,b.time);
                     }
                 });
+                // Request up to 1000 bars from the provider, but retain at most the newest
+                // 300 closed bars for the analyzer and chart.
+                if (result.size() > 300) {
+                    result = new ArrayList<>(result.subList(result.size() - 300, result.size()));
+                }
                 boolean fresh=!result.isEmpty() && now-result.get(result.size()-1).time < freshnessLimit(tf);
                 callback.onCandles(tf, result, fresh, fresh ? "OHLC Biquote terbarui" : "OHLC lama; sinyal dinonaktifkan");
             } catch (Exception e) {
