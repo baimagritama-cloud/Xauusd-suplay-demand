@@ -344,7 +344,7 @@ public class MainActivity extends Activity {
             boolean fresh=Boolean.TRUE.equals(freshness.get(selectedTf()))&&"LIVE".equals(liveState);
             text("Status data: "+(fresh?"FRESH / LIVE":"STALE / DATA BELUM TERSEDIA"),25,247,13,fresh?green:red,true);
             text("Kesimpulan analisis",25,288,14,yellow,true);
-            drawWrapped(r==null?"Belum ada data valid untuk timeframe ini.":r.reason,25,316,1460,16,12,white);
+            drawWrapped(r==null?"Belum ada data valid untuk timeframe ini.":r.reason,25,316,130,12,white,18,3);
             text("ATURAN PEMBACAAN",25,383,14,yellow,true);
             text("1. Swing hanya dikonfirmasi setelah dua candle di kanan tertutup.",25,411,12,white,false);
             text("2. Supply/Demand adalah kandidat dari displacement, bukan kepastian order institusi.",25,437,12,white,false);
