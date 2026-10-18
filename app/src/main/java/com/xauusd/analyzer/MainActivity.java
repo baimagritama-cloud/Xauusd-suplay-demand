@@ -19,7 +19,7 @@ public class MainActivity extends Activity {
     private final Map<String,SwingAnalysisEngine.Result> analyses=new HashMap<>();
     private final Map<String,Boolean> freshness=new HashMap<>();
     private final String[] frames={"M1","M5","M15","M30","H1","H4","H8","H12","D1","W1"};
-    private final int[] colors={0xff00d9f5,0xffff35c8,0xffc94dff,0xff398bff,0xff00e6e6,0xff00e879,0xffffdf32,0xffff8a24,0xffff4568,0xffffc83d};
+    private final int[] colors={0xff00ffff,0xffff00ff,0xffd000ff,0xff008cff,0xff00ffff,0xff00ff55,0xffffff00,0xffff8500,0xffff1744,0xffffff33};
     private int selected=4;
     private int pageIndex=0; // 0=Chart, 1=Keterangan, 2=Ringkasan Multi-Timeframe
     @Override public void onCreate(Bundle b){
@@ -51,7 +51,7 @@ public class MainActivity extends Activity {
 
     private class Dashboard extends View {
         Canvas c; Paint p=new Paint(3); float sx,sy,W,H,offX,offY;
-        final int bg=0xff030914,panel=0xff061525,panel2=0xff091d30,grid=0xff1b354a,white=0xfff4f8fc,muted=0xffa7b8ca,cyan=0xff00d9f5,red=0xffff4568,blue=0xff398bff,green=0xff00e879,yellow=0xffffdf32;
+        final int bg=0xff020610,panel=0xff071a2d,panel2=0xff0b2440,grid=0xff29445e,white=0xffffffff,muted=0xffc3d5e8,cyan=0xff00ffff,red=0xffff1744,blue=0xff008cff,green=0xff00ff55,yellow=0xffffff00;
         Dashboard(){super(MainActivity.this);setLayerType(View.LAYER_TYPE_HARDWARE,null);setFocusable(true);}
         void fill(int color){p.setColor(color);p.setStyle(Paint.Style.FILL);p.setStrokeWidth(1);}
         void rect(float x,float y,float w,float h,int color,float radius){fill(color);p.setAntiAlias(true);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.STROKE);p.setColor(0xff12617a);p.setStrokeWidth(1f);p.setAntiAlias(true);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.FILL);}
