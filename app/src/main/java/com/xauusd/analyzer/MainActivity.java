@@ -50,7 +50,7 @@ public class MainActivity extends Activity {
     @Override protected void onDestroy(){handler.removeCallbacksAndMessages(null);if(stream!=null)stream.close();if(candles!=null)candles.close();super.onDestroy();}
 
     private class Dashboard extends View {
-        Canvas c; Paint p=new Paint(3); float sx,sy,W,H;
+        Canvas c; Paint p=new Paint(3); float sx,sy,W,H,offX,offY;
         final int bg=0xff020713,panel=0xff031326,panel2=0xff061a30,grid=0xff17445e,white=0xfff2fbff,muted=0xff9bb9d4,cyan=0xff00f5ff,red=0xffff1744,blue=0xff2979ff,green=0xff00ff85,yellow=0xffffff00;
         Dashboard(){super(MainActivity.this);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
         void fill(int color){p.setColor(color);p.setStyle(Paint.Style.FILL);p.setStrokeWidth(1);}
@@ -60,10 +60,15 @@ public class MainActivity extends Activity {
         void center(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.DEFAULT_BOLD:Typeface.DEFAULT);c.drawText(s,x-p.measureText(s)/2,y,p);}
         @Override protected void onDraw(Canvas canvas){
             super.onDraw(canvas);c=canvas;W=getWidth();H=getHeight();c.save();
+            fill(bg);c.drawRect(0,0,W,H,p);
+            // Draw the dashboard as vector geometry with UNIFORM scaling. This preserves
+            // crisp text/lines and prevents distortion on ultrawide displays or casting.
             if(H>W){
-                sx=W/768f;sy=H/1536f;c.scale(sx,sy);drawPortrait();
+                sx=sy=Math.min(W/768f,H/1536f);offX=(W-768f*sx)/2f;offY=(H-1536f*sy)/2f;
+                c.translate(offX,offY);c.scale(sx,sy);drawPortrait();
             }else{
-                sx=W/1536f;sy=H/768f;c.scale(sx,sy);fill(bg);c.drawRect(0,0,1536,768,p);header();
+                sx=sy=Math.min(W/1536f,H/768f);offX=(W-1536f*sx)/2f;offY=(H-768f*sy)/2f;
+                c.translate(offX,offY);c.scale(sx,sy);fill(bg);c.drawRect(0,0,1536,768,p);header();
                 for(int i=0;i<10;i++){float x=8+i*77.2f;rect(x,82,72,36,i==selected?colors[i]:panel2,7);center(frames[i],x+36,105,14,i==selected?bg:colors[i],true);}
                 if(pageIndex==0)drawChart();else if(pageIndex==1)drawExplanation();else drawDetail();
                 if(pageIndex>0){rect(8,742,1520,20,0xff241722,4);text("DATA BERSUMBER DARI BIQUOTE • Analisis hanya memakai candle tertutup dan data segar. Sinyal WAIT jika belum terkonfirmasi.",17,756,11,0xffffb3be,true);}
@@ -537,6 +542,6 @@ public class MainActivity extends Activity {
             List<SwingAnalysisEngine.Candle> bars=data.get(selectedTf());if(bars!=null){for(int i=0;i<Math.min(6,bars.size());i++){SwingAnalysisEngine.Candle b=bars.get(bars.size()-1-i);text(new SimpleDateFormat("MM-dd HH:mm",Locale.US).format(new Date(b.time)),781,526+i*27,11,muted,false);text("O "+fmt(b.open)+" H "+fmt(b.high)+" L "+fmt(b.low)+" C "+fmt(b.close),900,526+i*27,11,white,false);}}
             rect(1427,690,84,31,panel2,7);center("← CHART",1469,710,11,cyan,true);
         }
-        @Override public boolean onTouchEvent(android.view.MotionEvent e){if(e.getAction()==MotionEvent.ACTION_UP){float x=e.getX()/sx,y=e.getY()/sy;if(H>W){if(y>=105&&y<191){int col=Math.max(0,Math.min(4,(int)((x-12)/150)));int row=y<145?0:1;selected=Math.max(0,Math.min(9,row*5+col));}else if(y>=1410){pageIndex=(pageIndex+1)%3;}else if(y<100&&x>500){pageIndex=(pageIndex+1)%3;}}else{if(y>=82&&y<120&&x<790){selected=Math.max(0,Math.min(9,(int)(x/77.2f)));}else if(y>670&&x>1300){pageIndex=(pageIndex+1)%3;}else if(y<75&&x>1400){pageIndex=(pageIndex+1)%3;}}invalidate();return true;}return true;}
+        @Override public boolean onTouchEvent(android.view.MotionEvent e){if(e.getAction()==MotionEvent.ACTION_UP){float x=(e.getX()-offX)/sx,y=(e.getY()-offY)/sy;if(H>W){if(y>=105&&y<191){int col=Math.max(0,Math.min(4,(int)((x-12)/150)));int row=y<145?0:1;selected=Math.max(0,Math.min(9,row*5+col));}else if(y>=1410){pageIndex=(pageIndex+1)%3;}else if(y<100&&x>500){pageIndex=(pageIndex+1)%3;}}else{if(y>=82&&y<120&&x<790){selected=Math.max(0,Math.min(9,(int)(x/77.2f)));}else if(y>670&&x>1300){pageIndex=(pageIndex+1)%3;}else if(y<75&&x>1400){pageIndex=(pageIndex+1)%3;}}invalidate();return true;}return true;}
     }
 }
