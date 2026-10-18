@@ -255,9 +255,8 @@ public class MainActivity extends Activity {
                     float z1=y+(float)((hi-z.high)/(hi-lo))*h;
                     float z2=y+(float)((hi-z.low)/(hi-lo))*h;
                     if(z2<y||z1>y+h)continue;
-                    fill(z.supply?red:blue);p.setAlpha(12);
-                    c.drawRect(x,Math.max(y,z1),x+plotW,Math.min(y+h,z2),p);
-                    p.setAlpha(255);
+                    // Do not paint zone fills across the candle plot: candle bodies and wicks
+                    // must remain completely unobstructed, even by transparent overlays.
                     String tag=frames[tf]+(z.supply?" S ":" D ")+fmt(z.low)+"-"+fmt(z.high);
                     zoneLabels.add(tag);
                     zonePriceY.add(Math.max(y+7,Math.min(y+h-2,(z1+z2)/2)));
