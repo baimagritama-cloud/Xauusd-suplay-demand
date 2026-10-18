@@ -373,25 +373,28 @@ public class MainActivity extends Activity {
             rect(762,443,766,168,panel,9);
             rect(762,620,766,91,panel,9);
             text("HALAMAN 2 — PERJALANAN HARGA XAUUSD",20,149,17,cyan,true);
-            drawWrapped("Analisis pergerakan harga lintas timeframe berdasarkan struktur, zona Supply & Demand, breakout, retest, dan level penting.",20,171,91,11,white,13,2);
-            text("STATUS: "+(live?"FEED LIVE":"FEED STALE — REFERENSI HISTORIS, BUKAN SINYAL LIVE"),20,197,10,live?green:red,true);
+            drawWrapped("Analisis pergerakan harga lintas timeframe berdasarkan struktur, zona Supply & Demand, breakout, retest, dan level penting.",20,169,88,10.5f,white,12,2);
+            text("STATUS: "+(live?"FEED LIVE":"FEED STALE — REFERENSI HISTORIS, BUKAN SINYAL LIVE"),20,199,9.5f,live?green:red,true);
             // Main path is ordered weekly -> intraday and numbered like the mockup.
             String[] order={"W1","D1","H4","H1","M30","M15","M5","M1"};
-            String[] titles={"Tren utama / konteks mingguan","Konsolidasi / zona harian","Reaksi dari zona H4","Uji ulang level H1","Breakout / range M30","Reaksi resistance M15","Arah menuju level M5","Struktur intraday M1"};
             for(int i=0;i<8;i++){
                 String tf=order[i]; int idx=Arrays.asList(frames).indexOf(tf);
-                float y=207+i*61.5f;
+                float y=216+i*59.1f;
                 SwingAnalysisEngine.Result rr=analyses.get(tf);
                 boolean fresh=Boolean.TRUE.equals(freshness.get(tf));
-                rect(17,y,725,57,panel2,6);
-                rect(25,y+10,31,31,i%2==0?0xff2263b5:0xff574184,18);
-                center(""+(i+1),40.5f,y+31,13,white,true);
-                rect(63,y+9,49,33,0xff0b263b,5);
-                center(tf,87.5f,y+30,11,colors[Math.max(0,idx)],true);
-                text(titles[i],122,y+17,10.5f,colors[Math.max(0,idx)],true);
-                drawWrapped(journeyFor(tf,px),122,y+34,77,9.5f,white,11,2);
-                text("High: "+fmt(rr==null?Double.NaN:rr.lastConfirmedHigh),646,y+19,8.5f,muted,false);
-                text("Low: "+fmt(rr==null?Double.NaN:rr.lastConfirmedLow),646,y+36,8.5f,muted,false);
+                String narrative=journeyFor(tf,px);
+                int stop=narrative.indexOf('.');
+                String narrativeTitle=stop>0?narrative.substring(0,stop):"Perjalanan harga "+tf;
+                if(narrativeTitle.length()>42)narrativeTitle=narrativeTitle.substring(0,39)+"...";
+                rect(17,y,725,55,panel2,6);
+                rect(25,y+11,31,31,i%2==0?0xff2263b5:0xff574184,18);
+                center(""+(i+1),40.5f,y+32,13,white,true);
+                rect(63,y+10,49,33,0xff0b263b,5);
+                center(tf,87.5f,y+31,11,colors[Math.max(0,idx)],true);
+                text(narrativeTitle,122,y+16,10.5f,colors[Math.max(0,idx)],true);
+                drawWrapped(narrative,122,y+32,62,9.2f,white,10.5f,2);
+                text("High: "+fmt(rr==null?Double.NaN:rr.lastConfirmedHigh),646,y+20,8.5f,muted,false);
+                text("Low: "+fmt(rr==null?Double.NaN:rr.lastConfirmedLow),646,y+37,8.5f,muted,false);
             }
             SwingAnalysisEngine.Result r=analyses.get(selectedTf());
             List<SwingAnalysisEngine.Candle> bars=data.get(selectedTf());
