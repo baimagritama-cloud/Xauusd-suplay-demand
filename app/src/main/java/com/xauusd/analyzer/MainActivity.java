@@ -19,7 +19,7 @@ public class MainActivity extends Activity {
     private final Map<String,SwingAnalysisEngine.Result> analyses=new HashMap<>();
     private final Map<String,Boolean> freshness=new HashMap<>();
     private final String[] frames={"M1","M5","M15","M30","H1","H4","H8","H12","D1","W1"};
-    private final int[] colors={0xff00ffff,0xffff00ff,0xffd000ff,0xff008cff,0xff00ffff,0xff00ff55,0xffffff00,0xffff8500,0xffff1744,0xffffff33};
+    private final int[] colors={0xffffd700,0xff00ffff,0xffdc1eff,0xff00ff5a,0xffff3737,0xffffd200,0xff00b8ff,0xffff8a00,0xffbd55ff,0xffffffff};
     private int selected=4;
     private int pageIndex=0; // 0=Chart, 1=Keterangan, 2=Ringkasan Multi-Timeframe
     @Override public void onCreate(Bundle b){
@@ -51,10 +51,10 @@ public class MainActivity extends Activity {
 
     private class Dashboard extends View {
         Canvas c; Paint p=new Paint(3); float sx,sy,W,H,offX,offY;
-        final int bg=0xff020610,panel=0xff071a2d,panel2=0xff0b2440,grid=0xff29445e,white=0xffffffff,muted=0xffc3d5e8,cyan=0xff00ffff,red=0xffff1744,blue=0xff008cff,green=0xff00ff55,yellow=0xffffff00;
+        final int bg=0xff02070c,panel=0xff142331,panel2=0xff0b1925,grid=0xff142837,white=0xffffffff,muted=0xffd0dce5,cyan=0xff00ffff,red=0xffff3737,blue=0xff00b8ff,green=0xff00ff5a,yellow=0xffffd200,gold=0xffffd700,magenta=0xffdc1eff;
         Dashboard(){super(MainActivity.this);setLayerType(View.LAYER_TYPE_HARDWARE,null);setFocusable(true);}
         void fill(int color){p.setColor(color);p.setStyle(Paint.Style.FILL);p.setStrokeWidth(1);}
-        void rect(float x,float y,float w,float h,int color,float radius){fill(color);p.setAntiAlias(true);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.STROKE);p.setColor(0xff12617a);p.setStrokeWidth(1f);p.setAntiAlias(true);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.FILL);}
+        void rect(float x,float y,float w,float h,int color,float radius){fill(color);p.setAntiAlias(true);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.STROKE);p.setColor(0xff00ffff);p.setStrokeWidth(1f);p.setAntiAlias(true);c.drawRoundRect(x,y,x+w,y+h,radius,radius,p);p.setStyle(Paint.Style.FILL);}
         void line(float x,float y,float x2,float y2,int color,float width){p.setColor(color);p.setAntiAlias(true);p.setStrokeCap(Paint.Cap.ROUND);p.setStrokeJoin(Paint.Join.ROUND);p.setStrokeWidth(width);p.setStyle(Paint.Style.STROKE);c.drawLine(x,y,x2,y2,p);p.setStyle(Paint.Style.FILL);}
         void text(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.create("sans-serif",Typeface.BOLD):Typeface.create("sans-serif",Typeface.NORMAL));p.setSubpixelText(true);p.setAntiAlias(true);p.setFilterBitmap(false);c.drawText(s,x,y,p);}
         void center(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.create("sans-serif",Typeface.BOLD):Typeface.create("sans-serif",Typeface.NORMAL));p.setSubpixelText(true);p.setAntiAlias(true);c.drawText(s,x-p.measureText(s)/2,y,p);}
@@ -75,12 +75,12 @@ public class MainActivity extends Activity {
                 c.scale(sx,sy);fill(bg);c.drawRect(0,0,1536,768,p);header();
                 for(int i=0;i<10;i++){float x=8+i*77.2f;rect(x,82,72,36,i==selected?colors[i]:panel2,7);center(frames[i],x+36,105,14,i==selected?bg:colors[i],true);}
                 if(pageIndex==0)drawChart();else if(pageIndex==1)drawExplanation();else drawDetail();
-                if(pageIndex>0){rect(8,742,1520,20,0xff241722,4);text("DATA BERSUMBER DARI BIQUOTE • Analisis hanya memakai candle tertutup dan data segar. Sinyal WAIT jika belum terkonfirmasi.",17,756,11,0xffffb3be,true);}
+                if(pageIndex>0){rect(8,742,1520,20,0xff142331,4);text("DATA BERSUMBER DARI BIQUOTE • Analisis hanya memakai candle tertutup dan data segar. Sinyal WAIT jika belum terkonfirmasi.",17,756,11,red,true);}
             }c.restore();
         }
         void drawPortrait(){
             fill(bg);c.drawRect(0,0,768,1536,p);
-            rect(12,12,744,82,panel,12);text("◆",25,64,37,0xffffff00,true);text("XAUUSD Analyzer",75,43,24,white,true);
+            rect(12,12,744,82,panel,12);text("◆",25,64,37,gold,true);text("XAUUSD Analyzer",75,43,24,white,true);
             text("HARGA "+livePrice+"  •  SPREAD "+liveSpread,76,70,13,green,true);
             text("FEED: "+liveState,535,43,13,liveState.equals("LIVE")?green:yellow,true);
             text("Quote: "+liveTime,535,68,10,muted,false);
