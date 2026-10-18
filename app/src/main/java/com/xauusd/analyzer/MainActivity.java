@@ -111,8 +111,9 @@ public class MainActivity extends Activity {
                     if(z2<y||z1>y+h)continue;
                     fill(z.supply?red:blue);p.setAlpha(18);c.drawRect(x,Math.max(y,z1),x+w,Math.min(y+h,z2),p);p.setAlpha(255);
                     float mid=Math.max(y+9,Math.min(y+h-3,(z1+z2)/2));
-                    String tag=frames[tf]+(z.supply?" SUPPLY":" DEMAND");
-                    float tagW=Math.min(92,p.measureText(tag)+8);
+                    String tag=frames[tf]+(z.supply?" SUPPLY ":" DEMAND ")+fmt(z.low)+"-"+fmt(z.high);
+                    p.setTextSize(9);p.setTypeface(Typeface.DEFAULT_BOLD);
+                    float tagW=Math.min(210,p.measureText(tag)+8);
                     fill(0xee03101e);c.drawRoundRect(x+w-tagW-3,mid-10,x+w-2,mid+3,3,3,p);
                     text(tag,x+w-tagW,mid,9,tfColor,true);
                 }
