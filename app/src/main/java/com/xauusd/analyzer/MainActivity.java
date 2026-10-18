@@ -21,7 +21,7 @@ public class MainActivity extends Activity {
     private final String[] frames={"M1","M5","M15","M30","H1","H4","H8","H12","D1","W1"};
     private final int[] colors={0xffb7d8f0,0xffff62c8,0xffc94dff,0xff1687ff,0xff08d5e7,0xff00d982,0xffffd21c,0xffff891a,0xffff2451,0xffffb81d};
     private int selected=4;
-    private boolean page2=false;
+    private int pageIndex=0; // 0=Chart, 1=Keterangan, 2=Ringkasan Multi-Timeframe
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);
@@ -58,7 +58,7 @@ public class MainActivity extends Activity {
         void line(float x,float y,float x2,float y2,int color,float width){p.setColor(color);p.setStrokeWidth(width);p.setStyle(Paint.Style.STROKE);c.drawLine(x,y,x2,y2,p);p.setStyle(Paint.Style.FILL);}
         void text(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.DEFAULT_BOLD:Typeface.DEFAULT);c.drawText(s,x,y,p);}
         void center(String s,float x,float y,float size,int color,boolean bold){fill(color);p.setTextSize(size);p.setTypeface(bold?Typeface.DEFAULT_BOLD:Typeface.DEFAULT);c.drawText(s,x-p.measureText(s)/2,y,p);}
-        @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);c=canvas;W=getWidth();H=getHeight();sx=W/1536f;sy=H/768f;c.save();c.scale(sx,sy);fill(bg);c.drawRect(0,0,1536,768,p);header();for(int i=0;i<10;i++){float x=8+i*77.2f;rect(x,82,72,36,i==selected?colors[i]:panel2,7);center(frames[i],x+36,105,14,i==selected?bg:colors[i],true);}if(page2)drawDetail();else drawChart();if(page2){rect(8,742,1520,20,0xff241722,4);text("DATA BERSUMBER DARI BIQUOTE • Analisis hanya memakai candle tertutup dan data segar. Sinyal WAIT jika belum terkonfirmasi.",17,756,11,0xffffb3be,true);}c.restore();}
+        @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);c=canvas;W=getWidth();H=getHeight();sx=W/1536f;sy=H/768f;c.save();c.scale(sx,sy);fill(bg);c.drawRect(0,0,1536,768,p);header();for(int i=0;i<10;i++){float x=8+i*77.2f;rect(x,82,72,36,i==selected?colors[i]:panel2,7);center(frames[i],x+36,105,14,i==selected?bg:colors[i],true);}if(pageIndex==0)drawChart();else if(pageIndex==1)drawExplanation();else drawDetail();if(pageIndex>0){rect(8,742,1520,20,0xff241722,4);text("DATA BERSUMBER DARI BIQUOTE • Analisis hanya memakai candle tertutup dan data segar. Sinyal WAIT jika belum terkonfirmasi.",17,756,11,0xffffb3be,true);}c.restore();}
         void header(){rect(8,7,780,68,panel,9);text("◆",20,51,42,0xffffc629,true);text("XAUUSD Analyzer",82,34,26,white,true);text("MULTI-TIMEFRAME • HH/HL/LH/LL • SUPPLY & DEMAND",83,57,12,muted,false);rect(800,7,250,68,panel,9);text("HARGA SEKARANG",814,26,11,muted,true);text(livePrice,814,53,25,green,true);rect(1060,7,125,68,panel,9);text("SPREAD",1073,26,11,muted,true);text(liveSpread,1073,51,22,white,true);rect(1195,7,333,68,panel,9);text("FEED: "+liveState,1208,29,14,liveState.equals("LIVE")?green:yellow,true);text("Waktu quote: "+liveTime,1208,51,13,white,false);}
         void drawChart(){
             // PAGE 1: maximize chart area; explanatory and live-journey panels move to later pages.
@@ -335,6 +335,26 @@ public class MainActivity extends Activity {
                 }
             }
         }
+        void drawExplanation(){
+            rect(8,127,1520,604,panel,9);
+            text("KETERANGAN ANALISIS XAUUSD",24,157,18,cyan,true);
+            text("Timeframe terpilih: "+selectedTf(),25,193,14,white,true);
+            SwingAnalysisEngine.Result r=analyses.get(selectedTf());
+            text("Struktur: "+(r==null?"MENUNGGU":r.structure),25,220,14,white,true);
+            boolean fresh=Boolean.TRUE.equals(freshness.get(selectedTf()))&&"LIVE".equals(liveState);
+            text("Status data: "+(fresh?"FRESH / LIVE":"STALE / DATA BELUM TERSEDIA"),25,247,13,fresh?green:red,true);
+            text("Kesimpulan analisis",25,288,14,yellow,true);
+            drawWrapped(r==null?"Belum ada data valid untuk timeframe ini.":r.reason,25,316,1460,16,12,white);
+            text("ATURAN PEMBACAAN",25,383,14,yellow,true);
+            text("1. Swing hanya dikonfirmasi setelah dua candle di kanan tertutup.",25,411,12,white,false);
+            text("2. Supply/Demand adalah kandidat dari displacement, bukan kepastian order institusi.",25,437,12,white,false);
+            text("3. Breakout perlu candle close melewati swing atau level.",25,463,12,white,false);
+            text("4. Retest perlu reaksi baru; tidak diasumsikan terjadi otomatis.",25,489,12,white,false);
+            text("5. Jika feed stale, candle tidak cukup, atau arah ambigu: WAIT.",25,515,12,white,false);
+            text("6. Aplikasi hanya membaca data; tidak mengirim order ke broker.",25,541,12,green,true);
+            text("Harga: "+livePrice+"   Spread: "+liveSpread+"   Waktu quote: "+liveTime+"   Feed: "+liveState,25,591,13,muted,false);
+            rect(1330,680,180,31,panel2,7);center("RINGKASAN →",1420,700,11,cyan,true);
+        }
         void drawDetail(){
             rect(8,127,745,604,panel,9);rect(763,127,765,604,panel,9);
             text("RINGKASAN MULTI-TIMEFRAME",22,153,16,cyan,true);
@@ -355,6 +375,6 @@ public class MainActivity extends Activity {
             List<SwingAnalysisEngine.Candle> bars=data.get(selectedTf());if(bars!=null){for(int i=0;i<Math.min(6,bars.size());i++){SwingAnalysisEngine.Candle b=bars.get(bars.size()-1-i);text(new SimpleDateFormat("MM-dd HH:mm",Locale.US).format(new Date(b.time)),781,526+i*27,11,muted,false);text("O "+fmt(b.open)+" H "+fmt(b.high)+" L "+fmt(b.low)+" C "+fmt(b.close),900,526+i*27,11,white,false);}}
             rect(1427,690,84,31,panel2,7);center("← CHART",1469,710,11,cyan,true);
         }
-        @Override public boolean onTouchEvent(android.view.MotionEvent e){if(e.getAction()==MotionEvent.ACTION_UP){float x=e.getX()/sx,y=e.getY()/sy;if(y>=82&&y<120&&x<790){selected=Math.max(0,Math.min(9,(int)(x/77.2f)));}else if(y>680&&x>1380){page2=!page2;}else if(y<75&&x>1400){page2=!page2;}invalidate();return true;}return true;}
+        @Override public boolean onTouchEvent(android.view.MotionEvent e){if(e.getAction()==MotionEvent.ACTION_UP){float x=e.getX()/sx,y=e.getY()/sy;if(y>=82&&y<120&&x<790){selected=Math.max(0,Math.min(9,(int)(x/77.2f)));}else if(y>670&&x>1300){pageIndex=(pageIndex+1)%3;}else if(y<75&&x>1400){pageIndex=(pageIndex+1)%3;}invalidate();return true;}return true;}
     }
 }
