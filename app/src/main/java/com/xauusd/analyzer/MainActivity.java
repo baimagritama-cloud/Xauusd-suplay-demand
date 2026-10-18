@@ -85,64 +85,103 @@ public class MainActivity extends Activity {
             text("Ketuk DETAIL untuk riwayat dan konteks multi-timeframe.",1014,682,11,cyan,true);
             rect(1439,690,72,31,panel2,7);center("DETAIL →",1475,710,11,cyan,true);
         }
+        String retestStatus(SwingAnalysisEngine.Zone z,List<SwingAnalysisEngine.Candle> bars){
+            if(z==null||bars==null||bars.size()<4)return "Data candle belum cukup untuk menilai retest.";
+            int from=Math.max(1,bars.size()-12);
+            int breakout=-1; boolean above=false;
+            for(int i=from;i<bars.size()-1;i++){
+                SwingAnalysisEngine.Candle b=bars.get(i);
+                if(b.close>z.high){breakout=i;above=true;}
+                else if(b.close<z.low){breakout=i;above=false;}
+            }
+            if(breakout<0)return "Belum ada candle close yang mengonfirmasi breakout zona ini.";
+            boolean retested=false; SwingAnalysisEngine.Candle reaction=null;
+            for(int i=breakout+1;i<bars.size();i++){
+                SwingAnalysisEngine.Candle b=bars.get(i);
+                boolean overlaps=b.high>=z.low&&b.low<=z.high;
+                if(overlaps){retested=true;reaction=b;}
+            }
+            if(!retested)return above
+                    ?"Breakout ke atas terdeteksi; menunggu harga kembali menguji zona dari atas."
+                    :"Breakout ke bawah terdeteksi; menunggu harga kembali menguji zona dari bawah.";
+            SwingAnalysisEngine.Candle last=bars.get(bars.size()-1);
+            if(above){
+                if(last.close>z.high&&last.close>last.open)
+                    return "Retest dari atas teramati; candle terakhir bullish dan bertahan di atas zona. Skenario lanjut naik masih perlu candle berikutnya.";
+                if(last.close<z.low)
+                    return "Retest gagal: candle close kembali di bawah zona. Breakout ke atas berpotensi gagal; tunggu struktur baru.";
+                return "Zona sedang diuji setelah breakout atas, tetapi candle close belum mengonfirmasi pantulan.";
+            }else{
+                if(last.close<z.low&&last.close<last.open)
+                    return "Retest dari bawah teramati; candle terakhir bearish dan bertahan di bawah zona. Skenario lanjut turun masih perlu candle berikutnya.";
+                if(last.close>z.high)
+                    return "Retest gagal: candle close kembali di atas zona. Breakdown ke bawah berpotensi gagal; tunggu struktur baru.";
+                return "Zona sedang diuji setelah breakout bawah, tetapi candle close belum mengonfirmasi penolakan.";
+            }
+        }
         void drawPriceJourney(SwingAnalysisEngine.Result selectedResult){
-            text("PERJALANAN HARGA LIVE",1014,549,13,yellow,true);
+            text("PERJALANAN HARGA LIVE + RETEST",1014,549,13,yellow,true);
             double px=price();
             boolean fresh=Boolean.TRUE.equals(freshness.get(selectedTf())) && "LIVE".equals(liveState);
             if(!Double.isFinite(px)){
-                text("• Menunggu harga dari feed Biquote.",1014,573,11,white,false);
-                text("• Arah perjalanan belum dapat dinilai.",1014,591,11,muted,false);
-                text("• Sinyal tetap WAIT sampai quote tersedia.",1014,609,11,red,true);
+                text("Menunggu quote Biquote; status WAIT.",1014,573,11,red,true);
+                text("Belum dapat mengidentifikasi sentuhan atau retest.",1014,592,11,white,false);
+                text("Tidak ada persentase skenario tanpa data valid.",1014,611,11,muted,false);
                 return;
             }
             if(!fresh){
                 text("Harga referensi "+fmt(px)+"; feed "+liveState+".",1014,572,11,red,true);
-                text("Struktur/zona historis tetap terlihat, tetapi",1014,590,11,white,false);
-                text("ini bukan pembacaan perjalanan live saat ini.",1014,608,11,white,false);
-                text("Probabilitas dinonaktifkan; sinyal tetap WAIT.",1014,626,11,yellow,true);
-                text("Saat feed LIVE, panel ini membaca sentuhan,",1014,644,11,muted,false);
-                text("reaksi candle, retest, dan zona TF berikutnya.",1014,662,11,muted,false);
+                text("Retest hanya dievaluasi dari candle historis tertutup.",1014,591,11,white,false);
+                text("Bukan pembacaan live; probabilitas dinonaktifkan.",1014,610,11,yellow,true);
+                text("Saat feed segar, panel cek breakout, retest,",1014,629,11,muted,false);
+                text("reaksi candle, dan kemungkinan retest gagal.",1014,648,11,muted,false);
                 return;
             }
-            SwingAnalysisEngine.Zone touched=null; String touchedTf="";
-            double nearest=Double.MAX_VALUE;
+            SwingAnalysisEngine.Zone zone=null; String zoneTf=""; double distance=Double.MAX_VALUE;
             for(int tf=0;tf<frames.length;tf++){
                 SwingAnalysisEngine.Result ar=analyses.get(frames[tf]); if(ar==null)continue;
                 for(SwingAnalysisEngine.Zone z:ar.zones){
                     double d=px<z.low?z.low-px:(px>z.high?px-z.high:0);
-                    if(d==0){touched=z;touchedTf=frames[tf];nearest=0;break;}
-                    if(d<nearest){nearest=d;touched=z;touchedTf=frames[tf];}
+                    if(d<distance){distance=d;zone=z;zoneTf=frames[tf];}
+                    if(d==0)break;
                 }
-                if(nearest==0)break;
+                if(distance==0)break;
             }
-            List<SwingAnalysisEngine.Candle> selectedBars=data.get(selectedTf());
-            SwingAnalysisEngine.Candle last=(selectedBars==null||selectedBars.isEmpty())?null:selectedBars.get(selectedBars.size()-1);
-            boolean bearishReaction=last!=null&&last.close<last.open;
-            boolean bullishReaction=last!=null&&last.close>last.open;
-            String zoneName=touched==null?"zona terdekat":(touched.supply?"SUPPLY ":"DEMAND ")+touchedTf;
-            String relation=touched==null?"belum ada zona kandidat":(nearest==0?"harga sedang berada di zona ":"zona terdekat ")+zoneName;
-            text("Harga "+fmt(px)+" • "+relation,1014,572,11,white,true);
-            if(touched!=null&&nearest==0){
-                int score=55;
-                boolean reaction=touched.supply?bearishReaction:bullishReaction;
-                if(reaction)score+=10;
-                if(selectedResult!=null&&((touched.supply&&selectedResult.structure.contains("LH"))||(!touched.supply&&selectedResult.structure.contains("HL"))))score+=5;
-                score=Math.min(70,score);
-                String direction=touched.supply?"penolakan turun":"pantulan naik";
-                text("Skenario utama: "+direction+" dari zona kandidat.",1014,591,11,touched.supply?red:green,true);
-                text("Skor indikatif awal: "+score+"% (heuristik, bukan statistik)",1014,610,10.5f,yellow,true);
-                text("Reaksi candle terakhir: "+(reaction?(touched.supply?"bearish":"bullish"):"belum searah"),1014,628,10.5f,white,false);
-                text("Validasi: tunggu candle close menjauh dari zona.",1014,646,10.5f,white,false);
-                text("Jika close menembus zona, skenario ditinjau ulang.",1014,664,10.5f,muted,false);
+            List<SwingAnalysisEngine.Candle> bars;
+            synchronized(data){bars=data.get(selectedTf());}
+            SwingAnalysisEngine.Candle last=(bars==null||bars.isEmpty())?null:bars.get(bars.size()-1);
+            boolean inZone=zone!=null&&zone.contains(px);
+            String zoneTitle=zone==null?"zona kandidat belum tersedia":(zone.supply?"SUPPLY ":"DEMAND ")+zoneTf+" "+fmt(zone.low)+"-"+fmt(zone.high);
+            text("Harga "+fmt(px)+" • "+(inZone?"MENYENTUH ":"zona terdekat ")+zoneTitle,1014,572,10.5f,white,true);
+            if(zone==null||bars==null||bars.size()<4){
+                text("Belum cukup data untuk menilai breakout/retest.",1014,592,11,muted,false);
+                text("Tunggu candle close; status tetap WAIT.",1014,611,11,yellow,true);
+                return;
+            }
+            String retest=retestStatus(zone,bars);
+            // Render a detailed, line-wrapped summary that distinguishes touch, breakout and retest.
+            int col=retest.contains("gagal")?red:(retest.contains("bertahan")?green:yellow);
+            text("RETEST • "+selectedTf()+" candle tertutup:",1014,592,11,cyan,true);
+            String[] lines=wrapText(retest,76);
+            int yy=610;
+            for(int i=0;i<Math.min(3,lines.length);i++){text(lines[i],1014,yy,10.5f,i==0?col:white,false);yy+=17;}
+            if(inZone){
+                text("Harga ada di zona; sentuhan saja bukan konfirmasi.",1014,yy+1,10.5f,white,false);
+                text("Validasi berikutnya: candle close + struktur.",1014,yy+18,10.5f,muted,false);
             }else{
-                String bias=selectedResult==null?"belum terbaca":selectedResult.structure;
-                text("Struktur "+selectedTf()+": "+bias+".",1014,591,11,white,false);
-                text("Harga belum menyentuh zona kandidat; jangan",1014,610,11,white,false);
-                text("menganggap retest atau penolakan sudah terjadi.",1014,628,11,white,false);
-                text("Pantau candle close menuju "+zoneName+".",1014,646,11,white,false);
-                text("Persentase skenario belum ditampilkan sebelum",1014,664,11,yellow,true);
-                text("ada sentuhan zona dan reaksi candle teramati.",1014,678,10,muted,false);
+                text("Belum menyentuh zona: jangan anggap retest terjadi.",1014,yy+1,10.5f,muted,false);
             }
+            text("Skenario bersifat kondisional; tidak ada % tanpa backtest.",1014,678,9.5f,yellow,true);
+        }
+        String[] wrapText(String s,int maxChars){
+            ArrayList<String> out=new ArrayList<>(); StringBuilder line=new StringBuilder();
+            for(String word:s.split(" ")){
+                if(line.length()>0&&line.length()+1+word.length()>maxChars){out.add(line.toString());line.setLength(0);}
+                if(line.length()>0)line.append(' ');
+                line.append(word);
+            }
+            if(line.length()>0)out.add(line.toString());
+            return out.toArray(new String[0]);
         }
         String selectedTf(){return frames[selected];}
         String fmt(double v){return Double.isFinite(v)?String.format(Locale.US,"%.2f",v):"--";}
