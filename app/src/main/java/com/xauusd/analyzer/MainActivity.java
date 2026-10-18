@@ -237,7 +237,6 @@ public class MainActivity extends Activity {
             for(int i=0;i<=6;i++){
                 float yy=y+i*h/6;
                 line(x,yy,x+plotW,yy,grid,1);
-                text(fmt(hi-i*(hi-lo)/6),x+w+3,yy+4,10,muted,false);
             }
             int n=bars.size()-start;
             float cw=plotW/n;
@@ -287,6 +286,12 @@ public class MainActivity extends Activity {
             Collections.sort(order,(a,b)->Float.compare(zonePriceY.get(a),zonePriceY.get(b)));
             fill(0xe8051526);c.drawRect(railX,y,x+w,y+h,p);
             line(railX,y,railX,y+h,grid,1);
+            // Price scale labels are painted INSIDE the reserved right rail, never outside
+            // the chart card or underneath candle bodies.
+            for(int i=0;i<=6;i++){
+                float yy=y+i*h/6;
+                text(fmt(hi-i*(hi-lo)/6),railX+6,yy+4,9.5f,muted,false);
+            }
             int slots=Math.max(1,(int)(h/18f));
             int drawn=Math.min(order.size(),slots);
             for(int j=0;j<drawn;j++){
