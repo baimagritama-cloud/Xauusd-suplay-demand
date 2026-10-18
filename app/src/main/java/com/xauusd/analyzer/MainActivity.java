@@ -378,25 +378,96 @@ public class MainActivity extends Activity {
             return out.toString();
         }
         void drawExplanation(){
-            rect(8,127,1520,604,panel,9);
-            text("PERJALANAN HARGA XAUUSD • ANALISIS LINTAS TIMEFRAME",24,153,17,cyan,true);
             double px=price();
             boolean live="LIVE".equals(liveState);
-            text("Harga acuan: "+livePrice+"   Spread: "+liveSpread+"   Quote: "+liveTime+"   FEED: "+liveState,25,179,12,live?green:red,true);
-            if(!live) drawWrapped("PERINGATAN: feed tidak berstatus LIVE. Uraian di bawah adalah pembacaan level dari candle yang tersedia, bukan klaim bahwa harga sedang bergerak saat ini. Retest/tembus hanya dinyatakan jika candle tertutup membuktikannya.",25,198,180,11,red,15,2);
-            else drawWrapped("Narasi dibentuk dari struktur swing dan kandidat zona Supply/Demand tiap timeframe. Sentuhan zona bukan bukti penolakan; breakout memerlukan candle close dan retest harus teramati.",25,198,180,11,muted,15,2);
-            text("JALUR PER TIMEFRAME",25,245,14,yellow,true);
-            // Two columns keep the journey readable on the landscape dashboard.
+            // Header and timeframe selector are shared with the other pages. This page follows
+            // the supplied mockup: journey at left; selected-TF interpretation and zones right.
+            rect(8,127,862,604,panel,9);
+            rect(879,127,520,360,panel,9);
+            rect(1408,127,120,360,panel,9);
+            rect(879,495,887,198,panel,9);
+            rect(879,701,887,30,panel,6);
+            text("HALAMAN 2 — PERJALANAN HARGA XAUUSD",22,153,17,cyan,true);
+            drawWrapped("Analisis lintas timeframe berdasarkan struktur, Supply & Demand, breakout, retest, dan level penting terbaru.",22,176,105,11,white,14,2);
+            text("STATUS: "+(live?"FEED LIVE":"FEED STALE — NARASI HISTORIS, BUKAN SINYAL LIVE"),22,208,10.5f,live?green:red,true);
+            text("URUTAN PERJALANAN MULTI-TIMEFRAME",22,231,12,yellow,true);
+            // Ten timeframes in descending-to-short-term order; each row is grounded in the
+            // actual engine output, not invented labels or prices.
             for(int i=0;i<10;i++){
-                String tf=frames[i];
-                int col=i<5?0:1, row=i%5;
-                float x=25+col*752f, y=269+row*86f;
+                String tf=frames[9-i]; // W1 down to M1
+                int idx=9-i;
+                float y=241+i*47.2f;
                 SwingAnalysisEngine.Result rr=analyses.get(tf);
-                boolean tfFresh=Boolean.TRUE.equals(freshness.get(tf));
-                rect(x,y,728,78,panel2,6);
-                text(tf+"  •  "+(rr==null?"MENUNGGU":rr.structure)+"  •  "+(tfFresh?"CANDLE SEGAR":"HISTORIS / STALE"),x+10,y+18,11,tfFresh?colors[i]:red,true);
-                drawWrapped(journeyFor(tf,px),x+10,y+37,100,10.5f,white,13,3);
+                boolean fresh=Boolean.TRUE.equals(freshness.get(tf));
+                rect(18,y,842,44,panel2,5);
+                rect(26,y+6,52,30,0xff0b2437,5);
+                center(tf,52,y+26,11,colors[idx],true);
+                text(rr==null?"MENUNGGU":rr.structure,89,y+16,10.5f, fresh?white:muted,true);
+                text(fresh?"FRESH":"STALE",89,y+31,9, fresh?green:red,true);
+                drawWrapped(journeyFor(tf,px),155,y+14,91,9.7f,white,11.5f,2);
+                if(rr!=null){
+                    text("H "+fmt(rr.lastConfirmedHigh),748,y+17,9.5f,muted,false);
+                    text("L "+fmt(rr.lastConfirmedLow),748,y+32,9.5f,muted,false);
+                }else{
+                    text("H —",748,y+17,9.5f,muted,false);text("L —",748,y+32,9.5f,muted,false);
+                }
             }
+            SwingAnalysisEngine.Result selectedResult=analyses.get(selectedTf());
+            List<SwingAnalysisEngine.Candle> selectedBars=data.get(selectedTf());
+            boolean selectedFresh=Boolean.TRUE.equals(freshness.get(selectedTf()));
+            text("DETAIL ANALISIS • "+selectedTf(),893,153,14,cyan,true);
+            text("Struktur",893,181,11,muted,false);
+            text(": "+(selectedResult==null?"DATA BELUM CUKUP":selectedResult.structure),1002,181,11,white,true);
+            text("Kondisi data",893,204,11,muted,false);
+            text(": "+(selectedFresh?"CANDLE SEGAR":"STALE / DATA BELUM TERSEDIA"),1002,204,10.5f,selectedFresh?green:red,true);
+            text("Harga acuan",893,227,11,muted,false);
+            text(": "+livePrice,1002,227,11,live?green:red,true);
+            text("High terakhir: "+fmt(selectedResult==null?Double.NaN:selectedResult.lastConfirmedHigh),893,252,10.5f,white,false);
+            text("Low terakhir : "+fmt(selectedResult==null?Double.NaN:selectedResult.lastConfirmedLow),893,273,10.5f,white,false);
+            text("INTERPRETASI",893,299,12,yellow,true);
+            String detailNarrative;
+            if(selectedResult==null||selectedBars==null||selectedBars.size()<12){
+                detailNarrative="Data OHLC timeframe "+selectedTf()+" belum cukup untuk membaca retest, breakout, atau penolakan. Tunggu data valid.";
+            }else if(!live){
+                detailNarrative="Feed berstatus STALE. Level yang ditampilkan berasal dari candle tersimpan; tidak dapat dipastikan harga sedang retest/menembus sekarang. Tunggu quote dan candle baru.";
+            }else{
+                detailNarrative=journeyFor(selectedTf(),px)+" Sinyal saat ini: "+selectedResult.signal+".";
+            }
+            drawWrapped(detailNarrative,893,321,70,10.2f,white,13,7);
+            text("BAR TERAKHIR",893,431,10.5f,cyan,true);
+            if(selectedBars!=null&&!selectedBars.isEmpty()){
+                SwingAnalysisEngine.Candle b=selectedBars.get(selectedBars.size()-1);
+                drawWrapped("O "+fmt(b.open)+"  H "+fmt(b.high)+"  L "+fmt(b.low)+"  C "+fmt(b.close),893,450,70,10,muted,12,2);
+            }else text("OHLC belum tersedia",893,451,10,muted,false);
+            text("ZONA S/D",1420,153,13,cyan,true);
+            if(selectedResult!=null){
+                int supplyCount=0,demandCount=0;
+                for(SwingAnalysisEngine.Zone z:selectedResult.zones){
+                    if(supplyCount+demandCount>=5) break;
+                    if(z.supply&&supplyCount<2){
+                        float yy=176+supplyCount*52;
+                        rect(1417,yy,102,42,0xff301c2b,5);text("SUPPLY "+(supplyCount+1),1425,yy+16,9.5f,0xffff6479,true);
+                        text(fmt(z.low)+"–"+fmt(z.high),1425,yy+31,8.5f,white,false);supplyCount++;
+                    }else if(!z.supply&&demandCount<2){
+                        float yy=286+demandCount*52;
+                        rect(1417,yy,102,42,0xff0c332b,5);text("DEMAND "+(demandCount+1),1425,yy+16,9.5f,0xff25df88,true);
+                        text(fmt(z.low)+"–"+fmt(z.high),1425,yy+31,8.5f,white,false);demandCount++;
+                    }
+                }
+                if(supplyCount==0) text("Supply: —",1420,190,9.5f,muted,false);
+                if(demandCount==0) text("Demand: —",1420,300,9.5f,muted,false);
+            }else{text("Supply: —",1420,190,9.5f,muted,false);text("Demand: —",1420,300,9.5f,muted,false);}
+            text("SKENARIO PERGERAKAN HARGA",893,519,14,cyan,true);
+            rect(892,531,426,148,0xff061f1c,6);
+            rect(1327,531,425,148,0xff28151e,6);
+            text("BULLISH • SYARAT KONFIRMASI",904,552,11,green,true);
+            text("BEARISH • SYARAT KONFIRMASI",1339,552,11,red,true);
+            String bullish="1. Candle tertutup bertahan di atas swing/level terdekat. 2. Breakout harus close melewati high terkonfirmasi. 3. Retest dari atas disertai reaksi baru. 4. Target berikutnya hanya level supply terdeteksi.";
+            String bearish="1. Candle gagal bertahan di atas level kunci. 2. Close menembus swing low terkonfirmasi. 3. Retest dari bawah gagal naik. 4. Target berikutnya hanya level demand terdeteksi.";
+            if(!live){bullish="Feed STALE: skenario bullish hanya bersyarat, belum aktif. Tunggu quote segar, candle close, lalu retest terkonfirmasi.";bearish="Feed STALE: skenario bearish hanya bersyarat, belum aktif. Jangan menganggap penembusan terjadi tanpa candle baru.";}
+            drawWrapped(bullish,904,575,62,10.2f,white,14,7);
+            drawWrapped(bearish,1339,575,62,10.2f,white,14,7);
+            text("CATATAN: candle tertutup • sentuhan zona bukan bukti penolakan • breakout perlu close • aplikasi hanya membaca data",893,721,10,0xffffb3be,true);
             rect(1324,686,186,30,panel2,7);center("RINGKASAN →",1417,706,11,cyan,true);
         }
         void drawDetail(){
