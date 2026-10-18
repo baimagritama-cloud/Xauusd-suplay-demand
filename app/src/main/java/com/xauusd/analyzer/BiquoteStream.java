@@ -13,7 +13,7 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Read-only Biquote quote client. Uses the documented REST endpoint with allowStale=false.
+ * Read-only Biquote quote client. Uses the documented REST endpoint with allowStale=true so closed-market last prices remain visible.
  * Polling every 5 seconds avoids falsely labelling a disconnected raw SignalR socket as live.
  */
 public final class BiquoteStream {
