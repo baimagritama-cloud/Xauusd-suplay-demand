@@ -258,13 +258,21 @@ public class MainActivity extends Activity {
             for(int tf=0;tf<frames.length;tf++){
                 SwingAnalysisEngine.Result zoneResult=analyses.get(frames[tf]);
                 if(zoneResult==null)continue;
-                for(SwingAnalysisEngine.Zone z:zoneResult.zones){
+                // Prevent dozens of historical zones from stacking into an opaque blanket:
+                // keep only the newest valid supply and newest valid demand per timeframe.
+                boolean keptSupply=false,keptDemand=false;
+                List<SwingAnalysisEngine.Zone> tfZones=zoneResult.zones;
+                for(int zi=tfZones.size()-1;zi>=0;zi--){
+                    SwingAnalysisEngine.Zone z=tfZones.get(zi);
+                    if((z.supply&&keptSupply)||(!z.supply&&keptDemand))continue;
                     float z1=y+(float)((hi-z.high)/(hi-lo))*h;
                     float z2=y+(float)((hi-z.low)/(hi-lo))*h;
                     if(z2<y||z1>y+h)continue;
+                    if(z.supply)keptSupply=true;else keptDemand=true;
                     int base=colors[tf];
-                    int border=(base&0x00ffffff)|0xc9000000;
-                    int translucent=(base&0x00ffffff)|0x2d000000;
+                    int border=(base&0x00ffffff)|0xb0000000;
+                    // Low alpha is intentional: candles remain the dominant visual layer.
+                    int translucent=(base&0x00ffffff)|0x10000000;
                     String tag=frames[tf]+(z.supply?" S ":" D ")+fmt(z.low)+"-"+fmt(z.high);
                     zoneLabels.add(tag);
                     zonePriceY.add(Math.max(y+7,Math.min(y+h-2,(z1+z2)/2)));
