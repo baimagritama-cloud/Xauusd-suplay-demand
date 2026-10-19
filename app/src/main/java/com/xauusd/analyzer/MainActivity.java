@@ -22,6 +22,7 @@ public class MainActivity extends Activity {
     private final int[] colors={0xffffd700,0xff00ffff,0xffdc1eff,0xff00ff5a,0xffff3737,0xffffd200,0xff00b8ff,0xffff8a00,0xffbd55ff,0xffffffff};
     private int selected=4;
     private int pageIndex=0; // 0=Chart, 1=Keterangan, 2=Ringkasan Multi-Timeframe
+    private boolean blinkOn=true;
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         getWindow().getDecorView().setSystemUiVisibility(5894|1024|512);
