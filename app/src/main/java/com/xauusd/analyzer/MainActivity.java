@@ -33,6 +33,7 @@ public class MainActivity extends Activity {
             public void onStatus(String state){liveState=state;runOnUiThread(()->dashboard.invalidate());}
         });
         stream.connect(); refreshCandles();
+        handler.postDelayed(new Runnable(){public void run(){blinkOn=!blinkOn;if(dashboard!=null)dashboard.invalidate();if(!isFinishing())handler.postDelayed(this,500);}},500);
     }
     private double price(){try{return Double.parseDouble(livePrice);}catch(Exception e){return Double.NaN;}}
     private void refreshCandles(){
