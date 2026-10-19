@@ -447,6 +447,41 @@ public class MainActivity extends Activity {
             if(!fresh||!"LIVE".equals(liveState)) body="DATA STALE — "+body+" Kondisi ini historis dan bukan klaim pergerakan live.";
             return name+". "+body;
         }
+        String buildInterpretation(String tf,double px,boolean verifiedLive){
+            SwingAnalysisEngine.Result r=analyses.get(tf);
+            List<SwingAnalysisEngine.Candle> bars=data.get(tf);
+            if(r==null||bars==null||bars.size()<3||!Double.isFinite(px))
+                return "DATA BELUM CUKUP: breakout, tembus level kunci, dan retest belum bisa dinilai. Tunggu quote serta candle valid.";
+            SwingAnalysisEngine.Candle last=bars.get(bars.size()-1);
+            double close=last.close;
+            StringBuilder out=new StringBuilder();
+            if(!verifiedLive)out.append("STALE: penjelasan hanya berdasarkan candle tersimpan; harga saat ini belum terverifikasi. ");
+            boolean up=Double.isFinite(r.lastConfirmedHigh)&&close>r.lastConfirmedHigh;
+            boolean down=Double.isFinite(r.lastConfirmedLow)&&close<r.lastConfirmedLow;
+            if(up)out.append("BREAKOUT ATAS: close terakhir di atas swing high ").append(fmt(r.lastConfirmedHigh)).append(". ");
+            else if(down)out.append("BREAKDOWN: close terakhir di bawah swing low ").append(fmt(r.lastConfirmedLow)).append(". ");
+            else out.append("BELUM ADA BREAKOUT swing terkonfirmasi; close terakhir ").append(fmt(close)).append(". ");
+            SwingAnalysisEngine.Zone sup=null,dem=null;
+            double sd=Double.MAX_VALUE,dd=Double.MAX_VALUE;
+            for(SwingAnalysisEngine.Zone z:r.zones){
+                double d=px<z.low?z.low-px:(px>z.high?px-z.high:0);
+                if(z.supply&&d<sd){sd=d;sup=z;}
+                if(!z.supply&&d<dd){dd=d;dem=z;}
+            }
+            if(sup!=null){
+                if(close>sup.high)out.append("Close menembus supply ").append(fmt(sup.high)).append("; pantau retest dari atas. ");
+                else if(close>=sup.low)out.append("Harga menguji supply ").append(fmt(sup.low)).append("-").append(fmt(sup.high)).append("; sentuhan bukan breakout. ");
+                else out.append("Supply terdekat ").append(fmt(sup.low)).append("-").append(fmt(sup.high)).append(". ");
+            }
+            if(dem!=null){
+                if(close<dem.low)out.append("Close menembus demand ").append(fmt(dem.low)).append("; pantau retest dari bawah. ");
+                else if(close<=dem.high)out.append("Harga menguji demand ").append(fmt(dem.low)).append("-").append(fmt(dem.high)).append("; pantulan belum terkonfirmasi. ");
+            }
+            if(up&&last.close>last.open)out.append("Candle terakhir bullish; retest belum otomatis dianggap berhasil.");
+            else if(down&&last.close<last.open)out.append("Candle terakhir bearish; retest belum otomatis dianggap berhasil.");
+            else out.append("Status retest: belum terkonfirmasi; perlu reaksi candle close.");
+            return out.toString();
+        }
         void drawExplanation(){
             double px=price();
             boolean live="LIVE".equals(liveState);
@@ -498,9 +533,7 @@ public class MainActivity extends Activity {
             text("● Level kunci: "+(r==null?"—":fmt(r.lastConfirmedHigh)+" / "+fmt(r.lastConfirmedLow)),786,283,12.13f,yellow,true);
             text("● Demand: "+(nd==null?"belum terdeteksi":fmt(nd.low)+" – "+fmt(nd.high)),786,303,12.13f,green,true);
             text("Interpretasi:",776,327,16.5f,white,true);
-            String interpretation;
-            if(!live||!fresh) interpretation="Feed stale: level berikut adalah konteks candle tersimpan. Tidak bisa dipastikan harga sedang retest/menembus sekarang.";
-            else interpretation=journeyFor(selectedTf(),px);
+            String interpretation=buildInterpretation(selectedTf(),px,live&&fresh);
             drawWrapped(interpretation,776,345,57,14.1f,white,13.2f,5);
             text("BAR TERAKHIR",776,414,9.5f,cyan,true);
             if(bars!=null&&!bars.isEmpty()){SwingAnalysisEngine.Candle b=bars.get(bars.size()-1);text("O "+fmt(b.open)+"  H "+fmt(b.high)+"  L "+fmt(b.low)+"  C "+fmt(b.close),868,414,11.25f,muted,false);}
