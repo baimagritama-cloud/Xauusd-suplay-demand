@@ -514,6 +514,17 @@ public class MainActivity extends Activity {
             else out.append("Status retest: belum terkonfirmasi; perlu reaksi candle close.");
             return out.toString();
         }
+        boolean priceInsideTimeframeZone(String tf,double px){
+            if(!Double.isFinite(px)||!"LIVE".equals(liveState)||!Boolean.TRUE.equals(freshness.get(tf)))return false;
+            SwingAnalysisEngine.Result result=analyses.get(tf);
+            if(result==null||result.zones==null)return false;
+            for(SwingAnalysisEngine.Zone zone:result.zones)if(zone.contains(px))return true;
+            return false;
+        }
+        void highlightTimeframeCard(float x,float y,float w,float h){
+            p.setColor(0xffffff00);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3f);p.setAntiAlias(true);
+            c.drawRoundRect(x,y,x+w,y+h,6,6,p);p.setStyle(Paint.Style.FILL);
+        }
         void drawExplanation(){
             double px=price();
             boolean live="LIVE".equals(liveState);
@@ -538,11 +549,14 @@ public class MainActivity extends Activity {
                 int stop=narrative.indexOf('.');
                 String narrativeTitle=stop>0?narrative.substring(0,stop):"Perjalanan harga "+tf;
                 if(narrativeTitle.length()>42)narrativeTitle=narrativeTitle.substring(0,39)+"...";
-                rect(17,y,725,55,panel2,6);
+                boolean priceInThisTf=priceInsideTimeframeZone(tf,px);
+                rect(17,y,725,55,priceInThisTf&&blinkOn?0xff263b36:panel2,6);
+                if(priceInThisTf&&blinkOn)highlightTimeframeCard(17,y,725,55);
                 rect(25,y+11,31,38.75f,i%2==0?0xff2263b5:0xff574184,18);
                 center(""+(i+1),40.5f,y+32,19.5f,white,true);
                 rect(63,y+10,49,33,0xff0b263b,5);
                 center(tf,87.5f,y+31,13.75f,colors[Math.max(0,idx)],true);
+                if(priceInThisTf&&blinkOn){fill(0xffffff00);c.drawCircle(116,y+27,4.5f,p);}
                 text(narrativeTitle,122,y+16,13.13f,colors[Math.max(0,idx)],true);
                 drawWrapped(narrative,122,y+32,62,13.8f,white,12.6f,2);
                 text("High: "+fmt(rr==null?Double.NaN:rr.lastConfirmedHigh),646,y+20,10.63f,muted,false);
