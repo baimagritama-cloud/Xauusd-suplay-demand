@@ -551,7 +551,6 @@ public class MainActivity extends Activity {
                 if(narrativeTitle.length()>42)narrativeTitle=narrativeTitle.substring(0,39)+"...";
                 boolean priceInThisTf=priceInsideTimeframeZone(tf,px);
                 rect(17,y,725,55,priceInThisTf&&blinkOn?0xff263b36:panel2,6);
-                if(priceInThisTf&&blinkOn)highlightTimeframeCard(17,y,725,55);
                 rect(25,y+11,31,38.75f,i%2==0?0xff2263b5:0xff574184,18);
                 center(""+(i+1),40.5f,y+32,19.5f,white,true);
                 rect(63,y+10,49,33,0xff0b263b,5);
