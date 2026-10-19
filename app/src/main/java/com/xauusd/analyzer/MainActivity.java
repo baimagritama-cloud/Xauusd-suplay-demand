@@ -588,6 +588,7 @@ public class MainActivity extends Activity {
             String bear="1. Gagal bertahan di level kunci. 2. Candle close menembus swing low. 3. Retest dari bawah gagal. 4. Pantau demand berikutnya.";
             if(!live||!fresh){bull="Feed STALE: skenario bullish belum aktif. Tunggu quote segar, candle close, dan retest terkonfirmasi.";bear="Feed STALE: skenario bearish belum aktif. Jangan anggap penembusan terjadi tanpa candle baru.";}
             drawWrapped(bull,786,516,54,14.26f,white,14.4f,6);drawWrapped(bear,1166,516,52,14.26f,white,14.4f,6);
+            text("Persentase = skor teknikal heuristik, bukan probabilitas statistik teruji.",786,604,8.5f,muted,false);
             text("⚠ CATATAN PENTING",776,644,12,yellow,true);
             drawWrapped("Analisis berdasarkan candle tertutup. Sentuhan zona bukan bukti penolakan. Level dapat berubah saat data baru datang. Konfirmasi pergerakan berikutnya pada chart.",776,665,125,14.26f,white,14.4f,3);
             rect(1360,680,151,26,panel2,6);center("RINGKASAN →",1435,698,12.5f,cyan,true);
