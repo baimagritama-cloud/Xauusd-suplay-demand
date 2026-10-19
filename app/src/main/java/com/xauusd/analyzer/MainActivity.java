@@ -447,6 +447,36 @@ public class MainActivity extends Activity {
             if(!fresh||!"LIVE".equals(liveState)) body="DATA STALE — "+body+" Kondisi ini historis dan bukan klaim pergerakan live.";
             return name+". "+body;
         }
+        int estimateBullishProbability(SwingAnalysisEngine.Result r,List<SwingAnalysisEngine.Candle> bars,double px){
+            // Heuristic scenario-weight score, NOT a statistically calibrated win probability.
+            int score=50;
+            if("HH / HL".equals(r.structure))score+=15;
+            else if("LH / LL".equals(r.structure))score-=15;
+            int n=bars.size();
+            int up=0,down=0;
+            for(int i=Math.max(1,n-5);i<n;i++){
+                SwingAnalysisEngine.Candle a=bars.get(i-1),b=bars.get(i);
+                if(b.close>a.close)up++;
+                else if(b.close<a.close)down++;
+            }
+            score+=(up-down)*3;
+            SwingAnalysisEngine.Candle last=bars.get(n-1);
+            double range=Math.max(0.00001,last.high-last.low);
+            double closePosition=(last.close-last.low)/range;
+            if(closePosition>=0.7)score+=5;
+            else if(closePosition<=0.3)score-=5;
+            if(Double.isFinite(r.lastConfirmedHigh)&&px>r.lastConfirmedHigh)score+=8;
+            if(Double.isFinite(r.lastConfirmedLow)&&px<r.lastConfirmedLow)score-=8;
+            for(SwingAnalysisEngine.Zone z:r.zones){
+                double d=px<z.low?z.low-px:(px>z.high?px-z.high:0);
+                double scale=Math.max(0.01,Math.abs(px)*0.001);
+                if(d<=scale){
+                    if(z.supply)score-=5;
+                    else score+=5;
+                }
+            }
+            return Math.max(5,Math.min(95,score));
+        }
         String buildInterpretation(String tf,double px,boolean verifiedLive){
             SwingAnalysisEngine.Result r=analyses.get(tf);
             List<SwingAnalysisEngine.Candle> bars=data.get(tf);
@@ -549,8 +579,11 @@ public class MainActivity extends Activity {
             }
             text("SKENARIO PERGERAKAN HARGA",776,467,13,cyan,true);
             rect(774,478,373,119,0xff06251e,6);rect(1154,478,361,119,0xff2b1720,6);
-            text("↗ SKENARIO BULLISH",786,497,10.5f,green,true);
-            text("↘ SKENARIO BEARISH",1166,497,13.13f,red,true);
+            boolean probabilityValid=live&&fresh&&r!=null&&bars!=null&&bars.size()>=12;
+            int bullPct=probabilityValid?estimateBullishProbability(r,bars,px): -1;
+            int bearPct=probabilityValid?100-bullPct: -1;
+            text("↗ SKENARIO BULLISH  "+(probabilityValid?bullPct+"%":"—"),786,497,10.5f,green,true);
+            text("↘ SKENARIO BEARISH  "+(probabilityValid?bearPct+"%":"—"),1166,497,13.13f,red,true);
             String bull="1. Bertahan di atas level kunci. 2. Candle close menembus supply. 3. Retest dari atas berhasil. 4. Level target berikutnya mengikuti supply terdeteksi.";
             String bear="1. Gagal bertahan di level kunci. 2. Candle close menembus swing low. 3. Retest dari bawah gagal. 4. Pantau demand berikutnya.";
             if(!live||!fresh){bull="Feed STALE: skenario bullish belum aktif. Tunggu quote segar, candle close, dan retest terkonfirmasi.";bear="Feed STALE: skenario bearish belum aktif. Jangan anggap penembusan terjadi tanpa candle baru.";}
