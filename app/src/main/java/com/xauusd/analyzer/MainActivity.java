@@ -722,7 +722,7 @@ public class MainActivity extends Activity {
                 drawScenarioTargetPair("3. Jalur bearish: ",bearTargets,1166,552,10.0f,red);
                 text("Batal jika close kembali di atas "+fmt(keyLow)+".",1166,570,9.0f,muted,false);
             }
-            text("Indikator H1: "+(bars==null?"data belum cukup":indicatorScenarioSummary(bars)),786,588,9.1f,cyan,true);
+            text("Indikator "+selectedTf()+": "+(bars==null?"data belum cukup":indicatorScenarioSummary(bars)),786,588,9.1f,cyan,true);
             text("Persentase = skor teknikal heuristik, bukan probabilitas statistik teruji.",786,604,8.5f,muted,false);
             text("⚠ CATATAN PENTING",776,644,12,yellow,true);
             drawWrapped("Analisis berdasarkan candle tertutup. Sentuhan zona bukan bukti penolakan. Level dapat berubah saat data baru datang. Konfirmasi pergerakan berikutnya pada chart.",776,665,125,14.26f,white,14.4f,3);
