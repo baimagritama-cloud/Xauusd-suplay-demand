@@ -449,7 +449,7 @@ public class MainActivity extends Activity {
             if(!fresh||!"LIVE".equals(liveState)) body="DATA STALE — "+body+" Kondisi ini historis dan bukan klaim pergerakan live.";
             return name+". "+body;
         }
-        static final class IndicatorSnapshot {
+        final class IndicatorSnapshot {
             double rsi=Double.NaN,momentum=Double.NaN,adx=Double.NaN,plusDI=Double.NaN,minusDI=Double.NaN;
             double tenkan=Double.NaN,kijun=Double.NaN,spanA=Double.NaN,spanB=Double.NaN;
             boolean enough;
