@@ -525,6 +525,27 @@ public class MainActivity extends Activity {
             p.setColor(0xffffff00);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3f);p.setAntiAlias(true);
             c.drawRoundRect(x,y,x+w,y+h,6,6,p);p.setStyle(Paint.Style.FILL);
         }
+        String scenarioTarget(boolean bullish,SwingAnalysisEngine.Result r,double px){
+            if(r==null||!Double.isFinite(px))return "Target: menunggu data valid.";
+            SwingAnalysisEngine.Zone chosen=null;
+            if(bullish){
+                double nearest=Double.MAX_VALUE;
+                for(SwingAnalysisEngine.Zone z:r.zones){
+                    if(z.supply&&z.low>px&&z.low<nearest){nearest=z.low;chosen=z;}
+                }
+                if(chosen!=null)return "Target bullish: "+fmt(chosen.low)+"–"+fmt(chosen.high)+".";
+                if(Double.isFinite(r.lastConfirmedHigh)&&r.lastConfirmedHigh>px)return "Target bullish: swing high "+fmt(r.lastConfirmedHigh)+".";
+                return "Target bullish: belum ada supply di atas harga yang terdeteksi.";
+            }else{
+                double nearest=-Double.MAX_VALUE;
+                for(SwingAnalysisEngine.Zone z:r.zones){
+                    if(!z.supply&&z.high<px&&z.high>nearest){nearest=z.high;chosen=z;}
+                }
+                if(chosen!=null)return "Target bearish: "+fmt(chosen.low)+"–"+fmt(chosen.high)+".";
+                if(Double.isFinite(r.lastConfirmedLow)&&r.lastConfirmedLow<px)return "Target bearish: swing low "+fmt(r.lastConfirmedLow)+".";
+                return "Target bearish: belum ada demand di bawah harga yang terdeteksi.";
+            }
+        }
         void drawExplanation(){
             double px=price();
             boolean live="LIVE".equals(liveState);
@@ -599,8 +620,8 @@ public class MainActivity extends Activity {
             int bearPct=probabilityValid?100-bullPct: -1;
             text("↗ SKENARIO BULLISH  "+(probabilityValid?bullPct+"%":"—"),786,497,10.5f,green,true);
             text("↘ SKENARIO BEARISH  "+(probabilityValid?bearPct+"%":"—"),1166,497,13.13f,red,true);
-            String bull="1. Bertahan di atas level kunci. 2. Candle close menembus supply. 3. Retest dari atas berhasil. 4. Level target berikutnya mengikuti supply terdeteksi.";
-            String bear="1. Gagal bertahan di level kunci. 2. Candle close menembus swing low. 3. Retest dari bawah gagal. 4. Pantau demand berikutnya.";
+            String bull="1. Syarat: candle close menembus supply dan retest dari atas bertahan. "+scenarioTarget(true,r,px)+" Jika close kembali di bawah level breakout, skenario bullish perlu dievaluasi.";
+            String bear="1. Syarat: candle close menembus swing low dan retest dari bawah gagal. "+scenarioTarget(false,r,px)+" Jika close kembali di atas level breakdown, skenario bearish perlu dievaluasi.";
             if(!live||!fresh){bull="Feed STALE: skenario bullish belum aktif. Tunggu quote segar, candle close, dan retest terkonfirmasi.";bear="Feed STALE: skenario bearish belum aktif. Jangan anggap penembusan terjadi tanpa candle baru.";}
             drawWrapped(bull,786,516,54,14.26f,white,14.4f,6);drawWrapped(bear,1166,516,52,14.26f,white,14.4f,6);
             text("Persentase = skor teknikal heuristik, bukan probabilitas statistik teruji.",786,604,8.5f,muted,false);
