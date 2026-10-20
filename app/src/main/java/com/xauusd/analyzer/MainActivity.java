@@ -731,21 +731,42 @@ public class MainActivity extends Activity {
         void drawDetail(){
             rect(8,127,745,604,panel,9);rect(763,127,765,604,panel,9);
             text("RINGKASAN MULTI-TIMEFRAME",22,153,16,cyan,true);
-            float row=181;for(int i=0;i<10;i++){SwingAnalysisEngine.Result r=analyses.get(frames[i]);boolean fresh=Boolean.TRUE.equals(freshness.get(frames[i]));text(frames[i],23,row+i*49,16.8f,colors[i],true);text("Struktur: "+(r==null?"MENUNGGU":r.structure),83,row+i*49,18.72f,white,true);text("Signal: "+(r==null?"WAIT":r.signal),315,row+i*49,15.6f,yellow,true);text("High "+fmt(r==null?Double.NaN:r.lastConfirmedHigh)+" / Low "+fmt(r==null?Double.NaN:r.lastConfirmedLow),414,row+i*49,14.4f,muted,false);text(fresh?"FRESH":"WAIT",675,row+i*49,13.2f,fresh?green:red,true);line(20,row+10+i*49,740,row+10+i*49,grid,1);}
-            text("PENJELASAN ANALISIS",779,153,16,cyan,true);
-            SwingAnalysisEngine.Result r=analyses.get(selectedTf());text("Timeframe terpilih: "+selectedTf(),781,184,20.16f,white,true);
-            text("Struktur: "+(r==null?"MENUNGGU":r.structure),781,210,20.16f,white,true);
-            text("Status data: "+(Boolean.TRUE.equals(freshness.get(selectedTf()))?"FRESH":"STALE / DATA BELUM TERSEDIA"),781,236,15.6f,Boolean.TRUE.equals(freshness.get(selectedTf()))?green:red,true);
-            text("Kesimpulan: "+(r==null?"Belum ada data valid.":r.reason),781,270,14.4f,muted,false);
-            text("ATURAN PEMBACAAN",781,312,14,yellow,true);
-            text("1. Swing hanya dikonfirmasi setelah dua candle di kanan tertutup.",781,339,17.28f,white,false);
-            text("2. Supply/Demand adalah kandidat dari displacement, bukan order institusi pasti.",781,363,17.28f,white,false);
-            text("3. Breakout perlu candle close melewati swing/level.",781,387,17.28f,white,false);
-            text("4. Retest perlu reaksi baru; tidak diasumsikan terjadi otomatis.",781,411,17.28f,white,false);
-            text("5. Jika feed stale, candle tidak cukup, atau arah ambigu: WAIT.",781,435,17.28f,white,false);
-            text("6. Aplikasi hanya membaca data; tidak mengirim order ke broker.",781,459,14.4f,green,true);
-            text("RIWAYAT BAR TERAKHIR",781,499,14,cyan,true);
-            List<SwingAnalysisEngine.Candle> bars=data.get(selectedTf());if(bars!=null){for(int i=0;i<Math.min(6,bars.size());i++){SwingAnalysisEngine.Candle b=bars.get(bars.size()-1-i);text(new SimpleDateFormat("MM-dd HH:mm",Locale.US).format(new Date(b.time)),781,526+i*27,13.2f,muted,false);text("O "+fmt(b.open)+" H "+fmt(b.high)+" L "+fmt(b.low)+" C "+fmt(b.close),900,526+i*27,15.84f,white,false);}}
+            float row=181;for(int i=0;i<10;i++){SwingAnalysisEngine.Result rr=analyses.get(frames[i]);boolean freshTf=Boolean.TRUE.equals(freshness.get(frames[i]));text(frames[i],23,row+i*49,16.8f,colors[i],true);text("Struktur: "+(rr==null?"MENUNGGU":rr.structure),83,row+i*49,18.72f,white,true);text("Signal: "+(rr==null?"WAIT":rr.signal),315,row+i*49,15.6f,yellow,true);text("High "+fmt(rr==null?Double.NaN:rr.lastConfirmedHigh)+" / Low "+fmt(rr==null?Double.NaN:rr.lastConfirmedLow),414,row+i*49,14.4f,muted,false);text(freshTf?"FRESH":"WAIT",675,row+i*49,13.2f,freshTf?green:red,true);line(20,row+10+i*49,740,row+10+i*49,grid,1);}
+            String tf=selectedTf();SwingAnalysisEngine.Result r=analyses.get(tf);List<SwingAnalysisEngine.Candle> bars=data.get(tf);
+            boolean fresh=Boolean.TRUE.equals(freshness.get(tf))&&"LIVE".equals(liveState);
+            double px=price();boolean enough=r!=null&&bars!=null&&bars.size()>=60&&Double.isFinite(px);
+            IndicatorSnapshot ind=calculateIndicators(bars);
+            int bull=enough?estimateBullishProbability(r,bars,px):-1;
+            double[] bullT=enough?scenarioTargets(true,r,bars,px):new double[0],bearT=enough?scenarioTargets(false,r,bars,px):new double[0];
+            SwingAnalysisEngine.Zone cautionBull=null,cautionBear=null;double upDist=Double.MAX_VALUE,downDist=Double.MAX_VALUE;
+            if(r!=null&&r.zones!=null)for(SwingAnalysisEngine.Zone z:r.zones){
+                if(z.supply&&z.high>px){double d=Math.max(0,z.low-px);if(d<upDist){upDist=d;cautionBull=z;}}
+                if(!z.supply&&z.low<px){double d=Math.max(0,px-z.high);if(d<downDist){downDist=d;cautionBear=z;}}
+            }
+            SwingAnalysisEngine.Candle last=bars!=null&&!bars.isEmpty()?bars.get(bars.size()-1):null;
+            boolean bullReject=last!=null&&cautionBull!=null&&last.high>=cautionBull.low&&last.close<last.open;
+            boolean bearReject=last!=null&&cautionBear!=null&&last.low<=cautionBear.high&&last.close>last.open;
+            boolean bullInd=ind.enough&&ind.momentum>0&&ind.plusDI>ind.minusDI&&last!=null&&last.close>Math.max(ind.spanA,ind.spanB);
+            boolean bearInd=ind.enough&&ind.momentum<0&&ind.minusDI>ind.plusDI&&last!=null&&last.close<Math.min(ind.spanA,ind.spanB);
+            text("PENJELASAN PERJALANAN HARGA — "+tf,779,153,16,cyan,true);
+            text("Harga sekarang: "+fmt(px)+"   |   Struktur: "+(r==null?"DATA BELUM CUKUP":r.structure),781,181,16,white,true);
+            text("DATA: "+(fresh?"LIVE / CANDLE SEGAR":"STALE / BELUM TERVERIFIKASI")+"   •   Skor bullish: "+(bull<0?"—":bull+"%")+"   •   bearish: "+(bull<0?"—":(100-bull)+"%"),781,205,12.5f,fresh?green:red,true);
+            rect(775,219,741,91,panel2,6);
+            text("1. JALUR UTAMA — JIKA BULLISH",788,241,13,green,true);
+            drawWrapped("Dari "+fmt(px)+" menuju konfirmasi close di atas "+fmt(r==null?Double.NaN:r.lastConfirmedHigh)+". Setelah retest bertahan, target berikutnya: "+(bullT.length>0?fmt(bullT[0]):"belum valid")+(bullT.length>1?" lalu "+fmt(bullT[1]:""):"")+".",788,260,91,13.2f,white,14.5f,3);
+            rect(775,316,741,91,panel2,6);
+            text("2. AREA WASPADA BULLISH",788,338,13,yellow,true);
+            String bullCaution=cautionBull==null?"Belum ada zona supply di atas harga yang valid. Jangan mengarang level.": "Supply "+fmt(cautionBull.low)+"–"+fmt(cautionBull.high)+". "+(bullReject?"WASPADA: candle terakhir menunjukkan potensi penolakan; pantau kemungkinan turun dari "+fmt(last.close)+" ke "+fmt(cautionBull.low)+".":(last!=null&&last.close>cautionBull.high&&bullInd?"AMAN SEMENTARA: candle close di atas zona dan Momentum/DI/Ichimoku mendukung; jalur bullish dapat dilanjutkan.":"MENUNGGU: status belum aman. Tunggu candle close melewati zona dan konfirmasi indikator."));
+            drawWrapped(bullCaution,788,357,91,13.2f,bullReject?red:white,14.5f,3);
+            rect(775,413,741,91,panel2,6);
+            text("3. JALUR UTAMA — JIKA BEARISH",788,435,13,red,true);
+            drawWrapped("Dari "+fmt(px)+" menuju konfirmasi close di bawah "+fmt(r==null?Double.NaN:r.lastConfirmedLow)+". Setelah retest gagal naik, target berikutnya: "+(bearT.length>0?fmt(bearT[0]):"belum valid")+(bearT.length>1?" lalu "+fmt(bearT[1]):"")+".",788,454,91,13.2f,white,14.5f,3);
+            rect(775,510,741,91,panel2,6);
+            text("4. AREA WASPADA BEARISH",788,532,13,yellow,true);
+            String bearCaution=cautionBear==null?"Belum ada zona demand di bawah harga yang valid. Jangan mengarang level.": "Demand "+fmt(cautionBear.low)+"–"+fmt(cautionBear.high)+". "+(bearReject?"WASPADA: candle terakhir menunjukkan potensi pantulan; pantau kemungkinan naik dari "+fmt(last.close)+" ke "+fmt(cautionBear.high)+".":(last!=null&&last.close<cautionBear.low&&bearInd?"AMAN SEMENTARA: candle close di bawah zona dan Momentum/DI/Ichimoku mendukung; jalur bearish dapat dilanjutkan.":"MENUNGGU: status belum aman. Tunggu candle close menembus zona dan konfirmasi indikator."));
+            drawWrapped(bearCaution,788,551,91,13.2f,bearReject?red:white,14.5f,3);
+            text("INDIKATOR "+tf+": "+(bars==null?"data belum cukup":indicatorScenarioSummary(bars)),781,625,11.5f,cyan,true);
+            drawWrapped("Aturan pembalikan: jika area menolak harga, tampilkan WASPADA dan level awal→akhir koreksi; arah lanjutan baru dikonfirmasi setelah candle tertutup. RSI ekstrem saja bukan sinyal reversal. Skor % adalah heuristik, bukan probabilitas statistik teruji.",781,646,120,12.2f,muted,13.2f,4);
             rect(1427,690,84,31,panel2,7);center("← CHART",1469,710,13.2f,cyan,true);
         }
         @Override public boolean onTouchEvent(android.view.MotionEvent e){if(e.getAction()==MotionEvent.ACTION_UP){float x=(e.getX()-offX)/sx,y=(e.getY()-offY)/sy;if(H>W){if(y>=105&&y<191){int col=Math.max(0,Math.min(4,(int)((x-12)/150)));int row=y<145?0:1;selected=Math.max(0,Math.min(9,row*5+col));}else if(y>=1410){pageIndex=(pageIndex+1)%3;}else if(y<100&&x>500){pageIndex=(pageIndex+1)%3;}}else{if(y>=82&&y<120&&x<790){selected=Math.max(0,Math.min(9,(int)(x/77.2f)));}else if(y>670&&x>1300){pageIndex=(pageIndex+1)%3;}else if(y<75&&x>1400){pageIndex=(pageIndex+1)%3;}}invalidate();return true;}return true;}
