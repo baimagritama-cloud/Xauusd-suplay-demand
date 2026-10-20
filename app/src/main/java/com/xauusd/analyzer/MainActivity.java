@@ -526,22 +526,37 @@ public class MainActivity extends Activity {
             c.drawRoundRect(x,y,x+w,y+h,6,6,p);p.setStyle(Paint.Style.FILL);
         }
         double[] scenarioTargets(boolean bullish,SwingAnalysisEngine.Result r,List<SwingAnalysisEngine.Candle> bars){
-            if(r==null||bars==null||bars.size()<5)return new double[0];
-            // Find two distinct confirmed swing targets beyond the broken key swing.
+            if(r==null||r.swings==null||bars==null||bars.size()<16)return new double[0];
             double broken=bullish?r.lastConfirmedHigh:r.lastConfirmedLow;
             if(!Double.isFinite(broken))return new double[0];
-            int n=bars.size();java.util.TreeSet<Double> levels=new java.util.TreeSet<>();
-            for(int i=Math.max(2,n-160);i<n-2;i++){
-                SwingAnalysisEngine.Candle a=bars.get(i-1),b=bars.get(i),cc=bars.get(i+1);
-                if(bullish){
-                    if(b.high>=a.high&&b.high>=cc.high&&b.high>broken)levels.add(b.high);
-                }else{
-                    if(b.low<=a.low&&b.low<=cc.low&&b.low<broken)levels.add(b.low);
+            // Estimate ATR-like average true range from recent closed candles.
+            int n=bars.size(),from=Math.max(1,n-14);double trSum=0;int trCount=0;
+            for(int i=from;i<n;i++){
+                SwingAnalysisEngine.Candle cur=bars.get(i),prev=bars.get(i-1);
+                trSum+=Math.max(cur.high-cur.low,Math.max(Math.abs(cur.high-prev.close),Math.abs(cur.low-prev.close)));
+                trCount++;
+            }
+            double avgRange=trCount==0?Double.NaN:trSum/trCount;
+            if(!Double.isFinite(avgRange)||avgRange<=0)return new double[0];
+            double minGap=avgRange*0.5;
+            java.util.TreeSet<Double> levels=new java.util.TreeSet<>();
+            for(SwingAnalysisEngine.Swing swing:r.swings){
+                if(bullish&&swing.high&&swing.price>=broken+minGap)levels.add(swing.price);
+                if(!bullish&&!swing.high&&swing.price<=broken-minGap)levels.add(swing.price);
+            }
+            // Choose nearest valid structural levels first and require TP1/TP2 to be
+            // meaningfully separated; don't manufacture targets from tiny candle wiggles.
+            ArrayList<Double> ordered=new ArrayList<>();
+            if(bullish){ordered.addAll(levels);}
+            else {for(Iterator<Double> it=levels.descendingIterator();it.hasNext();)ordered.add(it.next());}
+            ArrayList<Double> chosen=new ArrayList<>();
+            for(double level:ordered){
+                if(chosen.isEmpty()||Math.abs(level-chosen.get(chosen.size()-1))>=minGap){
+                    chosen.add(level);if(chosen.size()==2)break;
                 }
             }
-            double[] out=new double[Math.min(2,levels.size())];int k=0;
-            if(bullish){for(double level:levels){out[k++]=level;if(k==2)break;}}
-            else {for(Iterator<Double> it=levels.descendingIterator();it.hasNext()&&k<2;)out[k++]=it.next();}
+            double[] out=new double[chosen.size()];
+            for(int i=0;i<chosen.size();i++)out[i]=chosen.get(i);
             return out;
         }
         void drawScenarioLine(String prefix,double level,float x,float y,float size,int levelColor){
