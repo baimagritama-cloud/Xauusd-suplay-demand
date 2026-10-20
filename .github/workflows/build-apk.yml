@@ -2,6 +2,8 @@ name: Build XAUUSD Analyzer APK
 on:
   workflow_dispatch:
   push:
+    branches: [ main, complete-live-multitimeframe-dashboard ]
+  pull_request:
     branches: [ main ]
 permissions:
   contents: read

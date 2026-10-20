@@ -46,9 +46,9 @@ public final class SwingAnalysisEngine {
     private SwingAnalysisEngine() {}
 
     public static Result analyze(List<Candle> input, double currentPrice, boolean dataFresh) {
-        if (input == null || input.size()<12 || !dataFresh || !Double.isFinite(currentPrice)) {
+        if (input == null || input.size()<12) {
             return new Result(new ArrayList<>(), new ArrayList<>(), "DATA BELUM CUKUP", "WAIT",
-                    dataFresh ? "Menunggu minimal 12 candle OHLC valid." : "Data basi/tidak live; sinyal dinonaktifkan.",
+                    "Menunggu minimal 12 candle OHLC valid.",
                     Double.NaN, Double.NaN);
         }
         ArrayList<Swing> swings=new ArrayList<>();
@@ -87,7 +87,13 @@ public final class SwingAnalysisEngine {
             else if(lastHigh<ph && lastLow<pl) structure="LH / LL";
         }
         String signal="WAIT", reason="Belum ada breakout terkonfirmasi; tunggu candle close dan retest.";
-        if(Double.isFinite(lastHigh) && currentPrice>lastHigh) {
+        // Historical OHLC can still describe structure while the market is closed, but never
+        // promote stale candles or a missing quote into a live actionable signal.
+        if (!dataFresh || !Double.isFinite(currentPrice)) {
+            reason = !dataFresh
+                    ? "Struktur historis dihitung dari candle tersedia; data tidak segar, sinyal live dinonaktifkan."
+                    : "Struktur historis tersedia; harga live belum tersedia, sinyal dinonaktifkan.";
+        } else if(Double.isFinite(lastHigh) && currentPrice>lastHigh) {
             signal="WAIT"; reason="Harga melewati swing high, tetapi perlu candle close dan retest untuk konfirmasi.";
         } else if(Double.isFinite(lastLow) && currentPrice<lastLow) {
             signal="WAIT"; reason="Harga melewati swing low, tetapi perlu candle close dan retest untuk konfirmasi.";

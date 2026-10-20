@@ -13,7 +13,7 @@ import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Read-only Biquote quote client. Uses the documented REST endpoint with allowStale=false.
+ * Read-only Biquote quote client. Uses the documented REST endpoint with allowStale=true so closed-market last prices remain visible.
  * Polling every 5 seconds avoids falsely labelling a disconnected raw SignalR socket as live.
  */
 public final class BiquoteStream {
@@ -36,7 +36,7 @@ public final class BiquoteStream {
  private void poll(){
   if(closed)return;
   listener.onStatus("CHECKING FEED");
-  Request req=new Request.Builder().url("https://biquote.io/api/XAUUSD?allowStale=false")
+  Request req=new Request.Builder().url("https://biquote.io/api/XAUUSD?allowStale=true")
     .header("Accept","application/json").build();
   activeCall=http.newCall(req);
   activeCall.enqueue(new okhttp3.Callback(){
