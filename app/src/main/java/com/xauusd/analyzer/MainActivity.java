@@ -753,7 +753,7 @@ public class MainActivity extends Activity {
             text("DATA: "+(fresh?"LIVE / CANDLE SEGAR":"STALE / BELUM TERVERIFIKASI")+"   •   Skor bullish: "+(bull<0?"—":bull+"%")+"   •   bearish: "+(bull<0?"—":(100-bull)+"%"),781,205,12.5f,fresh?green:red,true);
             rect(775,219,741,91,panel2,6);
             text("1. JALUR UTAMA — JIKA BULLISH",788,241,13,green,true);
-            drawWrapped("Dari "+fmt(px)+" menuju konfirmasi close di atas "+fmt(r==null?Double.NaN:r.lastConfirmedHigh)+". Setelah retest bertahan, target berikutnya: "+(bullT.length>0?fmt(bullT[0]):"belum valid")+(bullT.length>1?" lalu "+fmt(bullT[1]:""):"")+".",788,260,91,13.2f,white,14.5f,3);
+            drawWrapped("Dari "+fmt(px)+" menuju konfirmasi close di atas "+fmt(r==null?Double.NaN:r.lastConfirmedHigh)+". Setelah retest bertahan, target berikutnya: "+(bullT.length>0?fmt(bullT[0]):"belum valid")+(bullT.length>1?" lalu "+fmt(bullT[1]):"")+".",788,260,91,13.2f,white,14.5f,3);
             rect(775,316,741,91,panel2,6);
             text("2. AREA WASPADA BULLISH",788,338,13,yellow,true);
             String bullCaution=cautionBull==null?"Belum ada zona supply di atas harga yang valid. Jangan mengarang level.": "Supply "+fmt(cautionBull.low)+"–"+fmt(cautionBull.high)+". "+(bullReject?"WASPADA: candle terakhir menunjukkan potensi penolakan; pantau kemungkinan turun dari "+fmt(last.close)+" ke "+fmt(cautionBull.low)+".":(last!=null&&last.close>cautionBull.high&&bullInd?"AMAN SEMENTARA: candle close di atas zona dan Momentum/DI/Ichimoku mendukung; jalur bullish dapat dilanjutkan.":"MENUNGGU: status belum aman. Tunggu candle close melewati zona dan konfirmasi indikator."));
