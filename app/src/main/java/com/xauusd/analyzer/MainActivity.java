@@ -550,6 +550,23 @@ public class MainActivity extends Activity {
             float xx=x+p.measureText(prefix);
             text(fmt(level),xx,y,size,Double.isFinite(level)?levelColor:muted,true);
         }
+        void drawScenarioTargetPair(String label,double[] levels,float x,float y,float size,int color){
+            text(label,x,y,size,white,true);
+            float xx=x+p.measureText(label);
+            if(levels==null||levels.length==0){text("Target belum valid",xx,y,size,muted,false);return;}
+            text("TP1 ",xx,y,size,white,false);xx+=measure("TP1 ",size);
+            text(fmt(levels[0]),xx,y,size,color,true);xx+=measure(fmt(levels[0]),size)+measure("   ",size);
+            if(levels.length>1){
+                text("TP2 ",xx,y,size,white,false);xx+=measure("TP2 ",size);
+                text(fmt(levels[1]),xx,y,size,color,true);
+            }else{
+                text("TP2 belum valid",xx,y,size,muted,false);
+            }
+        }
+        float measure(String value,float size){
+            p.setTextSize(size);p.setTypeface(Typeface.DEFAULT_BOLD);p.setAntiAlias(true);
+            return p.measureText(value);
+        }
         void drawExplanation(){
             double px=price();
             boolean live="LIVE".equals(liveState);
@@ -633,16 +650,12 @@ public class MainActivity extends Activity {
             }else{
                 drawScenarioLine("1. Close tembus swing high: ",keyHigh,786,516,11.2f,green);
                 drawScenarioLine("2. Retest bertahan di atas: ",keyHigh,786,534,11.2f,yellow);
-                if(bullTargets.length>=2){text("3. Target bullish:",786,552,11.2f,white,false);drawScenarioLine("TP1 ",bullTargets[0],870,552,11.2f,green);drawScenarioLine("TP2 ",bullTargets[1],786,570,11.2f,green);}
-                else if(bullTargets.length==1)drawScenarioLine("3. Target 1 (TP1): ",bullTargets[0],786,552,11.2f,green);
-                else text("3. Dua target swing high belum valid.",786,552,10.5f,muted,false);
-                text("Invalidasi: close di bawah level breakout.",786,588,9.8f,muted,false);
+                drawScenarioTargetPair("3. Target bullish: ",bullTargets,786,552,10.6f,green);
+                text("Invalidasi: close di bawah level breakout.",786,570,9.8f,muted,false);
                 drawScenarioLine("1. Close tembus swing low: ",keyLow,1166,516,11.2f,red);
                 drawScenarioLine("2. Retest gagal naik di atas: ",keyLow,1166,534,11.2f,yellow);
-                if(bearTargets.length>=2){text("3. Target bearish:",1166,552,11.2f,white,false);drawScenarioLine("TP1 ",bearTargets[0],1270,552,11.2f,red);drawScenarioLine("TP2 ",bearTargets[1],1166,570,11.2f,red);}
-                else if(bearTargets.length==1)drawScenarioLine("3. Target 1 (TP1): ",bearTargets[0],1166,552,11.2f,red);
-                else text("3. Dua target swing low belum valid.",1166,552,10.2f,muted,false);
-                text("Invalidasi: close di atas level breakdown.",1166,588,9.6f,muted,false);
+                drawScenarioTargetPair("3. Target bearish: ",bearTargets,1166,552,10.2f,red);
+                text("Invalidasi: close di atas level breakdown.",1166,570,9.6f,muted,false);
             }
             text("Persentase = skor teknikal heuristik, bukan probabilitas statistik teruji.",786,604,8.5f,muted,false);
             text("⚠ CATATAN PENTING",776,644,12,yellow,true);
