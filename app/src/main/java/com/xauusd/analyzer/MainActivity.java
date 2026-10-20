@@ -566,11 +566,10 @@ public class MainActivity extends Activity {
             p.setColor(0xffffff00);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3f);p.setAntiAlias(true);
             c.drawRoundRect(x,y,x+w,y+h,6,6,p);p.setStyle(Paint.Style.FILL);
         }
-        double[] scenarioTargets(boolean bullish,SwingAnalysisEngine.Result r,List<SwingAnalysisEngine.Candle> bars){
-            if(r==null||r.swings==null||bars==null||bars.size()<16)return new double[0];
-            double broken=bullish?r.lastConfirmedHigh:r.lastConfirmedLow;
-            if(!Double.isFinite(broken))return new double[0];
-            // Estimate ATR-like average true range from recent closed candles.
+        double[] scenarioTargets(boolean bullish,SwingAnalysisEngine.Result r,List<SwingAnalysisEngine.Candle> bars,double currentPrice){
+            if(r==null||r.swings==null||bars==null||bars.size()<16||!Double.isFinite(currentPrice))return new double[0];
+            double trigger=bullish?r.lastConfirmedHigh:r.lastConfirmedLow;
+            if(!Double.isFinite(trigger))return new double[0];
             int n=bars.size(),from=Math.max(1,n-14);double trSum=0;int trCount=0;
             for(int i=from;i<n;i++){
                 SwingAnalysisEngine.Candle cur=bars.get(i),prev=bars.get(i-1);
@@ -580,16 +579,16 @@ public class MainActivity extends Activity {
             double avgRange=trCount==0?Double.NaN:trSum/trCount;
             if(!Double.isFinite(avgRange)||avgRange<=0)return new double[0];
             double minGap=avgRange*0.5;
+            // Targets must be beyond BOTH the current quote and the confirmation trigger.
+            double boundary=bullish?Math.max(currentPrice,trigger):Math.min(currentPrice,trigger);
             java.util.TreeSet<Double> levels=new java.util.TreeSet<>();
             for(SwingAnalysisEngine.Swing swing:r.swings){
-                if(bullish&&swing.high&&swing.price>=broken+minGap)levels.add(swing.price);
-                if(!bullish&&!swing.high&&swing.price<=broken-minGap)levels.add(swing.price);
+                if(bullish&&swing.high&&swing.price>=boundary+minGap)levels.add(swing.price);
+                if(!bullish&&!swing.high&&swing.price<=boundary-minGap)levels.add(swing.price);
             }
-            // Choose nearest valid structural levels first and require TP1/TP2 to be
-            // meaningfully separated; don't manufacture targets from tiny candle wiggles.
             ArrayList<Double> ordered=new ArrayList<>();
-            if(bullish){ordered.addAll(levels);}
-            else {for(Iterator<Double> it=levels.descendingIterator();it.hasNext();)ordered.add(it.next());}
+            if(bullish)ordered.addAll(levels);
+            else for(Iterator<Double> it=levels.descendingIterator();it.hasNext();)ordered.add(it.next());
             ArrayList<Double> chosen=new ArrayList<>();
             for(double level:ordered){
                 if(chosen.isEmpty()||Math.abs(level-chosen.get(chosen.size()-1))>=minGap){
@@ -599,6 +598,16 @@ public class MainActivity extends Activity {
             double[] out=new double[chosen.size()];
             for(int i=0;i<chosen.size();i++)out[i]=chosen.get(i);
             return out;
+        }
+        String indicatorScenarioSummary(List<SwingAnalysisEngine.Candle> bars){
+            IndicatorSnapshot v=calculateIndicators(bars);
+            if(!v.enough)return "Indikator: data belum cukup";
+            SwingAnalysisEngine.Candle last=bars.get(bars.size()-1);
+            double top=Math.max(v.spanA,v.spanB),bottom=Math.min(v.spanA,v.spanB);
+            String momentum=v.momentum>0?"MOM↑":v.momentum<0?"MOM↓":"MOM=";
+            String di=v.plusDI>v.minusDI?"DI+":v.minusDI>v.plusDI?"DI-":"DI=";
+            String ichi=last.close>top&&v.tenkan>v.kijun?"ICHI↑":last.close<bottom&&v.tenkan<v.kijun?"ICHI↓":"ICHI campur";
+            return "RSI "+String.format(Locale.US,"%.0f",v.rsi)+" • "+momentum+" • ADX "+String.format(Locale.US,"%.0f",v.adx)+" "+di+" • "+ichi;
         }
         void drawScenarioLine(String prefix,double level,float x,float y,float size,int levelColor){
             text(prefix,x,y,size,white,false);
@@ -699,20 +708,21 @@ public class MainActivity extends Activity {
             text("↘ SKENARIO BEARISH  "+(probabilityValid?bearPct+"%":"—"),1166,497,13.13f,red,true);
             double keyHigh=r==null?Double.NaN:r.lastConfirmedHigh;
             double keyLow=r==null?Double.NaN:r.lastConfirmedLow;
-            double[] bullTargets=scenarioTargets(true,r,bars),bearTargets=scenarioTargets(false,r,bars);
+            double[] bullTargets=scenarioTargets(true,r,bars,px),bearTargets=scenarioTargets(false,r,bars,px);
             if(!live||!fresh){
                 drawWrapped("FEED STALE: tunggu quote segar dan candle tertutup; skenario belum dapat dinilai.",786,520,49,12.8f,white,16,4);
                 drawWrapped("FEED STALE: tunggu quote segar dan candle tertutup; skenario belum dapat dinilai.",1166,520,46,12.8f,white,16,4);
             }else{
-                drawScenarioLine("1. Close tembus swing high: ",keyHigh,786,516,11.2f,green);
-                drawScenarioLine("2. Retest bertahan di atas: ",keyHigh,786,534,11.2f,yellow);
-                drawScenarioTargetPair("3. Target bullish: ",bullTargets,786,552,10.6f,green);
-                text("Invalidasi: close di bawah level breakout.",786,570,9.8f,muted,false);
-                drawScenarioLine("1. Close tembus swing low: ",keyLow,1166,516,11.2f,red);
-                drawScenarioLine("2. Retest gagal naik di atas: ",keyLow,1166,534,11.2f,yellow);
-                drawScenarioTargetPair("3. Target bearish: ",bearTargets,1166,552,10.2f,red);
-                text("Invalidasi: close di atas level breakdown.",1166,570,9.6f,muted,false);
+                drawScenarioLine("1. Dari harga "+fmt(px)+" → close > ",keyHigh,786,516,10.3f,green);
+                drawScenarioLine("2. Retest + konfirmasi indikator: ",keyHigh,786,534,10.3f,yellow);
+                drawScenarioTargetPair("3. Jalur bullish: ",bullTargets,786,552,10.3f,green);
+                text("Batal jika close kembali di bawah "+fmt(keyHigh)+".",786,570,9.2f,muted,false);
+                drawScenarioLine("1. Dari harga "+fmt(px)+" → close < ",keyLow,1166,516,10.1f,red);
+                drawScenarioLine("2. Retest + konfirmasi indikator: ",keyLow,1166,534,10.1f,yellow);
+                drawScenarioTargetPair("3. Jalur bearish: ",bearTargets,1166,552,10.0f,red);
+                text("Batal jika close kembali di atas "+fmt(keyLow)+".",1166,570,9.0f,muted,false);
             }
+            text("Indikator H1: "+(bars==null?"data belum cukup":indicatorScenarioSummary(bars)),786,588,9.1f,cyan,true);
             text("Persentase = skor teknikal heuristik, bukan probabilitas statistik teruji.",786,604,8.5f,muted,false);
             text("⚠ CATATAN PENTING",776,644,12,yellow,true);
             drawWrapped("Analisis berdasarkan candle tertutup. Sentuhan zona bukan bukti penolakan. Level dapat berubah saat data baru datang. Konfirmasi pergerakan berikutnya pada chart.",776,665,125,14.26f,white,14.4f,3);
