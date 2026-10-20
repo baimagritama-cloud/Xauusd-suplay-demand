@@ -449,35 +449,76 @@ public class MainActivity extends Activity {
             if(!fresh||!"LIVE".equals(liveState)) body="DATA STALE — "+body+" Kondisi ini historis dan bukan klaim pergerakan live.";
             return name+". "+body;
         }
-        int estimateBullishProbability(SwingAnalysisEngine.Result r,List<SwingAnalysisEngine.Candle> bars,double px){
-            // Heuristic scenario-weight score, NOT a statistically calibrated win probability.
-            int score=50;
-            if("HH / HL".equals(r.structure))score+=15;
-            else if("LH / LL".equals(r.structure))score-=15;
+        static final class IndicatorSnapshot {
+            double rsi=Double.NaN,momentum=Double.NaN,adx=Double.NaN,plusDI=Double.NaN,minusDI=Double.NaN;
+            double tenkan=Double.NaN,kijun=Double.NaN,spanA=Double.NaN,spanB=Double.NaN;
+            boolean enough;
+        }
+        IndicatorSnapshot calculateIndicators(List<SwingAnalysisEngine.Candle> bars){
+            IndicatorSnapshot v=new IndicatorSnapshot();
+            if(bars==null||bars.size()<60)return v;
             int n=bars.size();
-            int up=0,down=0;
-            for(int i=Math.max(1,n-5);i<n;i++){
-                SwingAnalysisEngine.Candle a=bars.get(i-1),b=bars.get(i);
-                if(b.close>a.close)up++;
-                else if(b.close<a.close)down++;
+            // Wilder RSI(14) and ADX(14), computed on this timeframe's own OHLC bars.
+            double gain=0,loss=0;
+            for(int i=n-14;i<n;i++){double d=bars.get(i).close-bars.get(i-1).close;if(d>0)gain+=d;else loss-=d;}
+            double ag=gain/14.0,al=loss/14.0;
+            v.rsi=al==0?100:100.0-100.0/(1.0+ag/al);
+            v.momentum=bars.get(n-1).close-bars.get(n-15).close;
+            double tr14=0,pdm14=0,mdm14=0;ArrayList<Double> dxs=new ArrayList<>();
+            int start=Math.max(1,n-28);
+            for(int i=start;i<n;i++){
+                SwingAnalysisEngine.Candle c0=bars.get(i),p0=bars.get(i-1);
+                double up=c0.high-p0.high,down=p0.low-c0.low;
+                double pdm=up>down&&up>0?up:0,mdm=down>up&&down>0?down:0;
+                double tr=Math.max(c0.high-c0.low,Math.max(Math.abs(c0.high-p0.close),Math.abs(c0.low-p0.close)));
+                tr14=tr14*13.0/14.0+tr/14.0;pdm14=pdm14*13.0/14.0+pdm/14.0;mdm14=mdm14*13.0/14.0+mdm/14.0;
+                double pdi=tr14==0?0:100*pdm14/tr14,mdi=tr14==0?0:100*mdm14/tr14;
+                double sum=pdi+mdi; if(sum>0)dxs.add(100*Math.abs(pdi-mdi)/sum);
             }
-            score+=(up-down)*3;
+            if(!dxs.isEmpty()){v.adx=0;for(double d:dxs)v.adx+=d;v.adx/=dxs.size();v.plusDI=tr14==0?0:100*pdm14/tr14;v.minusDI=tr14==0?0:100*mdm14/tr14;}
             SwingAnalysisEngine.Candle last=bars.get(n-1);
-            double range=Math.max(0.00001,last.high-last.low);
+            v.tenkan=midpoint(bars,n-9,n);v.kijun=midpoint(bars,n-26,n);
+            v.spanA=(v.tenkan+v.kijun)/2.0;v.spanB=midpoint(bars,n-52,n);
+            v.enough=Double.isFinite(v.rsi)&&Double.isFinite(v.momentum)&&Double.isFinite(v.adx)&&Double.isFinite(v.tenkan)&&Double.isFinite(v.kijun)&&Double.isFinite(v.spanB);
+            return v;
+        }
+        double midpoint(List<SwingAnalysisEngine.Candle> bars,int from,int to){
+            from=Math.max(0,from);double hi=-Double.MAX_VALUE,lo=Double.MAX_VALUE;
+            for(int i=from;i<to;i++){hi=Math.max(hi,bars.get(i).high);lo=Math.min(lo,bars.get(i).low);}
+            return hi==-Double.MAX_VALUE?Double.NaN:(hi+lo)/2.0;
+        }
+        int estimateBullishProbability(SwingAnalysisEngine.Result r,List<SwingAnalysisEngine.Candle> bars,double px){
+            // Heuristic score only; indicator confluence is not a calibrated probability.
+            int score=50;
+            if("HH / HL".equals(r.structure))score+=12;
+            else if("LH / LL".equals(r.structure))score-=12;
+            int n=bars.size(),up=0,down=0;
+            for(int i=Math.max(1,n-5);i<n;i++){SwingAnalysisEngine.Candle a=bars.get(i-1),b=bars.get(i);if(b.close>a.close)up++;else if(b.close<a.close)down++;}
+            score+=(up-down)*2;
+            SwingAnalysisEngine.Candle last=bars.get(n-1);double range=Math.max(0.00001,last.high-last.low);
             double closePosition=(last.close-last.low)/range;
-            if(closePosition>=0.7)score+=5;
-            else if(closePosition<=0.3)score-=5;
-            if(Double.isFinite(r.lastConfirmedHigh)&&px>r.lastConfirmedHigh)score+=8;
-            if(Double.isFinite(r.lastConfirmedLow)&&px<r.lastConfirmedLow)score-=8;
-            for(SwingAnalysisEngine.Zone z:r.zones){
-                double d=px<z.low?z.low-px:(px>z.high?px-z.high:0);
-                double scale=Math.max(0.01,Math.abs(px)*0.001);
-                if(d<=scale){
-                    if(z.supply)score-=5;
-                    else score+=5;
-                }
+            if(closePosition>=0.7)score+=4;else if(closePosition<=0.3)score-=4;
+            if(Double.isFinite(r.lastConfirmedHigh)&&px>r.lastConfirmedHigh)score+=6;
+            if(Double.isFinite(r.lastConfirmedLow)&&px<r.lastConfirmedLow)score-=6;
+            for(SwingAnalysisEngine.Zone z:r.zones){double d=px<z.low?z.low-px:(px>z.high?px-z.high:0);double scale=Math.max(0.01,Math.abs(px)*0.001);if(d<=scale){if(z.supply)score-=4;else score+=4;}}
+            IndicatorSnapshot v=calculateIndicators(bars);
+            if(v.enough){
+                // RSI is a context filter, not a reversal trigger. Extreme readings temper
+                // continuation scores unless other trend evidence remains strong.
+                if(v.rsi<30)score+=4;else if(v.rsi>70)score-=4;
+                if(v.momentum>0)score+=5;else if(v.momentum<0)score-=5;
+                if(v.adx>=20){if(v.plusDI>v.minusDI)score+=7;else if(v.minusDI>v.plusDI)score-=7;}
+                double cloudTop=Math.max(v.spanA,v.spanB),cloudBottom=Math.min(v.spanA,v.spanB);
+                if(last.close>cloudTop&&v.tenkan>v.kijun)score+=7;
+                else if(last.close<cloudBottom&&v.tenkan<v.kijun)score-=7;
+                // Conflicting indicator evidence reduces confidence toward neutral.
+                int directional=0;
+                directional+=(v.momentum>0?1:v.momentum<0?-1:0);
+                directional+=(v.plusDI>v.minusDI?1:v.plusDI<v.minusDI?-1:0);
+                directional+=(last.close>cloudTop&&v.tenkan>v.kijun?1:last.close<cloudBottom&&v.tenkan<v.kijun?-1:0);
+                if(directional==0)score=50+(score-50)*3/4;
             }
-            return Math.max(5,Math.min(95,score));
+            return Math.max(10,Math.min(90,score));
         }
         String buildInterpretation(String tf,double px,boolean verifiedLive){
             SwingAnalysisEngine.Result r=analyses.get(tf);
