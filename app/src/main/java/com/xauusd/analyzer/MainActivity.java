@@ -525,25 +525,32 @@ public class MainActivity extends Activity {
             p.setColor(0xffffff00);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3f);p.setAntiAlias(true);
             c.drawRoundRect(x,y,x+w,y+h,6,6,p);p.setStyle(Paint.Style.FILL);
         }
-        String scenarioTarget(boolean bullish,SwingAnalysisEngine.Result r,double px){
+        String scenarioTarget(boolean bullish,SwingAnalysisEngine.Result r,double px,List<SwingAnalysisEngine.Candle> bars){
             if(r==null||!Double.isFinite(px))return "Target: menunggu data valid.";
-            SwingAnalysisEngine.Zone chosen=null;
+            // Use the next confirmed swing beyond the current key level, not the nearest
+            // zone around price; this is the next structural target after breakout/retest.
+            if(bars==null||bars.size()<5)return "Target: data candle belum cukup untuk swing berikutnya.";
+            int n=bars.size();
             if(bullish){
-                double nearest=Double.MAX_VALUE;
-                for(SwingAnalysisEngine.Zone z:r.zones){
-                    if(z.supply&&z.low>px&&z.low<nearest){nearest=z.low;chosen=z;}
+                double broken=Double.isFinite(r.lastConfirmedHigh)?r.lastConfirmedHigh:Double.NaN;
+                double next=Double.NaN;
+                for(int i=Math.max(2,n-80);i<n-2;i++){
+                    SwingAnalysisEngine.Candle a=bars.get(i-1),b=bars.get(i),c=bars.get(i+1);
+                    if(b.high>=a.high&&b.high>=c.high&&b.high>px&&(!Double.isFinite(next)||b.high<next))next=b.high;
                 }
-                if(chosen!=null)return "Target bullish: "+fmt(chosen.low)+"–"+fmt(chosen.high)+".";
-                if(Double.isFinite(r.lastConfirmedHigh)&&r.lastConfirmedHigh>px)return "Target bullish: swing high "+fmt(r.lastConfirmedHigh)+".";
-                return "Target bullish: belum ada supply di atas harga yang terdeteksi.";
+                if(Double.isFinite(next))return "Target bullish: swing high berikutnya "+fmt(next)+".";
+                if(Double.isFinite(broken)&&broken>px)return "Target bullish: swing high "+fmt(broken)+".";
+                return "Target bullish: swing high berikutnya belum terdeteksi; tunggu struktur valid.";
             }else{
-                double nearest=-Double.MAX_VALUE;
-                for(SwingAnalysisEngine.Zone z:r.zones){
-                    if(!z.supply&&z.high<px&&z.high>nearest){nearest=z.high;chosen=z;}
+                double broken=Double.isFinite(r.lastConfirmedLow)?r.lastConfirmedLow:Double.NaN;
+                double next=Double.NaN;
+                for(int i=Math.max(2,n-80);i<n-2;i++){
+                    SwingAnalysisEngine.Candle a=bars.get(i-1),b=bars.get(i),c=bars.get(i+1);
+                    if(b.low<=a.low&&b.low<=c.low&&b.low<px&&(!Double.isFinite(next)||b.low>next))next=b.low;
                 }
-                if(chosen!=null)return "Target bearish: "+fmt(chosen.low)+"–"+fmt(chosen.high)+".";
-                if(Double.isFinite(r.lastConfirmedLow)&&r.lastConfirmedLow<px)return "Target bearish: swing low "+fmt(r.lastConfirmedLow)+".";
-                return "Target bearish: belum ada demand di bawah harga yang terdeteksi.";
+                if(Double.isFinite(next))return "Target bearish: swing low berikutnya "+fmt(next)+".";
+                if(Double.isFinite(broken)&&broken<px)return "Target bearish: swing low "+fmt(broken)+".";
+                return "Target bearish: swing low berikutnya belum terdeteksi; tunggu struktur valid.";
             }
         }
         void drawExplanation(){
@@ -620,8 +627,10 @@ public class MainActivity extends Activity {
             int bearPct=probabilityValid?100-bullPct: -1;
             text("↗ SKENARIO BULLISH  "+(probabilityValid?bullPct+"%":"—"),786,497,10.5f,green,true);
             text("↘ SKENARIO BEARISH  "+(probabilityValid?bearPct+"%":"—"),1166,497,13.13f,red,true);
-            String bull="1. Syarat: candle close menembus supply dan retest dari atas bertahan. "+scenarioTarget(true,r,px)+" Jika close kembali di bawah level breakout, skenario bullish perlu dievaluasi.";
-            String bear="1. Syarat: candle close menembus swing low dan retest dari bawah gagal. "+scenarioTarget(false,r,px)+" Jika close kembali di atas level breakdown, skenario bearish perlu dievaluasi.";
+            double keyHigh=r==null?Double.NaN:r.lastConfirmedHigh;
+            double keyLow=r==null?Double.NaN:r.lastConfirmedLow;
+            String bull="1. Candle close menembus swing high "+fmt(keyHigh)+". 2. Retest dari atas gagal turun kembali di bawah "+fmt(keyHigh)+". 3. "+scenarioTarget(true,r,px,bars)+" Jika close kembali di bawah swing high, skenario bullish batal.";
+            String bear="1. Candle close menembus swing low "+fmt(keyLow)+". 2. Retest dari bawah gagal naik kembali di atas "+fmt(keyLow)+". 3. "+scenarioTarget(false,r,px,bars)+" Jika close kembali di atas swing low, skenario bearish batal.";
             if(!live||!fresh){bull="Feed STALE: skenario bullish belum aktif. Tunggu quote segar, candle close, dan retest terkonfirmasi.";bear="Feed STALE: skenario bearish belum aktif. Jangan anggap penembusan terjadi tanpa candle baru.";}
             drawWrapped(bull,786,516,54,14.26f,white,14.4f,6);drawWrapped(bear,1166,516,52,14.26f,white,14.4f,6);
             text("Persentase = skor teknikal heuristik, bukan probabilitas statistik teruji.",786,604,8.5f,muted,false);
