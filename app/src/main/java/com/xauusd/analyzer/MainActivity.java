@@ -525,21 +525,24 @@ public class MainActivity extends Activity {
             p.setColor(0xffffff00);p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(3f);p.setAntiAlias(true);
             c.drawRoundRect(x,y,x+w,y+h,6,6,p);p.setStyle(Paint.Style.FILL);
         }
-        double scenarioTarget(boolean bullish,SwingAnalysisEngine.Result r,List<SwingAnalysisEngine.Candle> bars){
-            if(r==null||bars==null||bars.size()<5)return Double.NaN;
-            // Target must be beyond the broken key swing, not merely beyond current price.
+        double[] scenarioTargets(boolean bullish,SwingAnalysisEngine.Result r,List<SwingAnalysisEngine.Candle> bars){
+            if(r==null||bars==null||bars.size()<5)return new double[0];
+            // Find two distinct confirmed swing targets beyond the broken key swing.
             double broken=bullish?r.lastConfirmedHigh:r.lastConfirmedLow;
-            if(!Double.isFinite(broken))return Double.NaN;
-            int n=bars.size(); double next=Double.NaN;
-            for(int i=Math.max(2,n-120);i<n-2;i++){
+            if(!Double.isFinite(broken))return new double[0];
+            int n=bars.size();java.util.TreeSet<Double> levels=new java.util.TreeSet<>();
+            for(int i=Math.max(2,n-160);i<n-2;i++){
                 SwingAnalysisEngine.Candle a=bars.get(i-1),b=bars.get(i),cc=bars.get(i+1);
                 if(bullish){
-                    if(b.high>=a.high&&b.high>=cc.high&&b.high>broken&&(!Double.isFinite(next)||b.high<next))next=b.high;
+                    if(b.high>=a.high&&b.high>=cc.high&&b.high>broken)levels.add(b.high);
                 }else{
-                    if(b.low<=a.low&&b.low<=cc.low&&b.low<broken&&(!Double.isFinite(next)||b.low>next))next=b.low;
+                    if(b.low<=a.low&&b.low<=cc.low&&b.low<broken)levels.add(b.low);
                 }
             }
-            return next;
+            double[] out=new double[Math.min(2,levels.size())];int k=0;
+            if(bullish){for(double level:levels){out[k++]=level;if(k==2)break;}}
+            else {for(Iterator<Double> it=levels.descendingIterator();it.hasNext()&&k<2;)out[k++]=it.next();}
+            return out;
         }
         void drawScenarioLine(String prefix,double level,float x,float y,float size,int levelColor){
             text(prefix,x,y,size,white,false);
@@ -623,21 +626,23 @@ public class MainActivity extends Activity {
             text("↘ SKENARIO BEARISH  "+(probabilityValid?bearPct+"%":"—"),1166,497,13.13f,red,true);
             double keyHigh=r==null?Double.NaN:r.lastConfirmedHigh;
             double keyLow=r==null?Double.NaN:r.lastConfirmedLow;
-            double bullTarget=scenarioTarget(true,r,bars),bearTarget=scenarioTarget(false,r,bars);
+            double[] bullTargets=scenarioTargets(true,r,bars),bearTargets=scenarioTargets(false,r,bars);
             if(!live||!fresh){
                 drawWrapped("FEED STALE: tunggu quote segar dan candle tertutup; skenario belum dapat dinilai.",786,520,49,12.8f,white,16,4);
                 drawWrapped("FEED STALE: tunggu quote segar dan candle tertutup; skenario belum dapat dinilai.",1166,520,46,12.8f,white,16,4);
             }else{
-                drawScenarioLine("1. Close menembus swing high: ",keyHigh,786,516,11.8f,green);
-                drawScenarioLine("2. Retest bertahan di atas: ",keyHigh,786,534,11.8f,yellow);
-                if(Double.isFinite(bullTarget))drawScenarioLine("3. Target swing high berikutnya: ",bullTarget,786,552,11.8f,green);
-                else text("3. Target: swing high berikutnya belum valid.",786,552,11.8f,muted,false);
-                text("Invalidasi: close kembali di bawah level breakout.",786,570,10.6f,muted,false);
-                drawScenarioLine("1. Close menembus swing low: ",keyLow,1166,516,11.8f,red);
-                drawScenarioLine("2. Retest gagal naik di atas: ",keyLow,1166,534,11.8f,yellow);
-                if(Double.isFinite(bearTarget))drawScenarioLine("3. Target swing low berikutnya: ",bearTarget,1166,552,11.8f,red);
-                else text("3. Target: swing low berikutnya belum valid.",1166,552,11.8f,muted,false);
-                text("Invalidasi: close kembali di atas level breakdown.",1166,570,10.2f,muted,false);
+                drawScenarioLine("1. Close tembus swing high: ",keyHigh,786,516,11.2f,green);
+                drawScenarioLine("2. Retest bertahan di atas: ",keyHigh,786,534,11.2f,yellow);
+                if(bullTargets.length>=2){text("3. Target bullish:",786,552,11.2f,white,false);drawScenarioLine("TP1 ",bullTargets[0],870,552,11.2f,green);drawScenarioLine("TP2 ",bullTargets[1],786,570,11.2f,green);}
+                else if(bullTargets.length==1)drawScenarioLine("3. Target 1 (TP1): ",bullTargets[0],786,552,11.2f,green);
+                else text("3. Dua target swing high belum valid.",786,552,10.5f,muted,false);
+                text("Invalidasi: close di bawah level breakout.",786,588,9.8f,muted,false);
+                drawScenarioLine("1. Close tembus swing low: ",keyLow,1166,516,11.2f,red);
+                drawScenarioLine("2. Retest gagal naik di atas: ",keyLow,1166,534,11.2f,yellow);
+                if(bearTargets.length>=2){text("3. Target bearish:",1166,552,11.2f,white,false);drawScenarioLine("TP1 ",bearTargets[0],1270,552,11.2f,red);drawScenarioLine("TP2 ",bearTargets[1],1166,570,11.2f,red);}
+                else if(bearTargets.length==1)drawScenarioLine("3. Target 1 (TP1): ",bearTargets[0],1166,552,11.2f,red);
+                else text("3. Dua target swing low belum valid.",1166,552,10.2f,muted,false);
+                text("Invalidasi: close di atas level breakdown.",1166,588,9.6f,muted,false);
             }
             text("Persentase = skor teknikal heuristik, bukan probabilitas statistik teruji.",786,604,8.5f,muted,false);
             text("⚠ CATATAN PENTING",776,644,12,yellow,true);
